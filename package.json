@@ -23,10 +23,10 @@
   "readmeFilename": "README.md",
   "devDependencies": {
     "coffee-script": "~1.6.1",
-    "mocha": "~1.8.2",
-    "lodash": "~1.2.1"
+    "mocha": "~1.8.2"
   },
   "dependencies": {
+    "lodash": "~1.2.1",
     "inflection": "~1.2.5",
     "underscore": "~1.4.4",
     "async": "~0.2.6",
