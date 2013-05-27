@@ -39,7 +39,6 @@ exports.ProtoModel =
   connection: null
   bucket: 'undefined'
   indexes: []
-  links: []
   registry: {}
 
   create: (key, doc)->
@@ -47,6 +46,7 @@ exports.ProtoModel =
       doc = key
       key = null
     inst = extend {}, @, {key:key, doc:doc}
+    inst.links = []
     @setDefaults @schema, inst.doc
 
     # run pre-create plugins after defaults have been applied
@@ -89,11 +89,22 @@ exports.ProtoModel =
     @connection.get bucket:@bucket, key:key, (reply)->
       if reply and reply.content and reply.content[0]
         inst = self.create JSON.parse reply.content[0].value, reply
+        inst.links = reply.content[0].links
         inst.reply = reply
         inst.key = key
       else
         inst = null
       callback null, inst
+
+# { content:
+#    [ { value: '{"e":5,"f":6}',
+#        content_type: 'application/json',
+#        vtag: '58VwhV1xnOUOKl8VjT1Uj3',
+#        links: [Object],
+#        last_mod: 1369679311,
+#        last_mod_usecs: 898272 } ],
+#   vclock: <Buffer 6b ce ... 2c 00> }
+#
 
   del: (callback)->
     con = @connection
@@ -198,9 +209,17 @@ exports.ProtoModel =
       throw new Error "Model does not support post #{kwd}"
     @plugins.post[kwd].push callable
 
-  relate: (tag, obj)->
+  relate: (tag, obj, dupes=false)->
     relation = tag:tag, key:obj.key, bucket:obj.bucket
-    @links.push relation
+    insert = true
+
+    if not dupes
+      for item in @links when item.tag==tag
+        if item.key == obj.key and item.bucket==obj.bucket
+          insert = false
+
+    if insert
+      @links.push relation
 
   resolve: (tag, callback)->
     self = @
