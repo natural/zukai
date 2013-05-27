@@ -6,12 +6,12 @@ inflection = require 'inflection'
 jsonschema = require 'jsonschema'
 
 
-exports.createModel = createModel = (defn)->
+exports.createModel = (defn)->
   defn = defn or {}
   name = defn.name
 
   if not name
-    throw new TypeError 'Schema name required'
+    throw new TypeError 'Model name required'
 
   bucket = defn.bucket
   bucket = inflection.pluralize name.toLowerCase() if not bucket
@@ -22,21 +22,19 @@ exports.createModel = createModel = (defn)->
     schema: defn.schema or {}
     bucket: bucket
     plugins:
-      pre: {init:[], save:[], del:[]}
-      post: {init:[], save:[], del:[]}
+      pre:  {create:[], save:[], del:[]}
+      post: {create:[], save:[], del:[]}
 
-  derived = extend new EventEmitter(), ProtoModel, options
+  derived = extend new EventEmitter(), exports.ProtoModel, options
 
   for key, value of (defn.methods or {})
     derived[key] = value
 
+  # returns derived
   derived.registry[bucket] = derived
-  derived
 
 
-
-
-exports.ProtoModel = ProtoModel =
+exports.ProtoModel =
   name: 'ProtoModel'
   connection: null
   bucket: 'undefined'
@@ -50,6 +48,19 @@ exports.ProtoModel = ProtoModel =
       key = null
     inst = extend {}, @, {key:key, doc:doc}
     @setDefaults @schema, inst.doc
+
+    # run pre-create plugins after defaults have been applied
+    # but before validation
+    stop = false
+    preCreate = (plugin, cb)->
+      plugin inst, (err)->
+        cb err, inst
+    async.each inst.plugins.pre.create, preCreate, (err, results)->
+      if err
+        stop = err
+    if stop
+      return null
+
     res = jsonschema.validate inst.doc, @schema
     if res.errors.length
       inst.invalid = res
@@ -57,6 +68,17 @@ exports.ProtoModel = ProtoModel =
     else
       inst.invalid = false
       @emit 'create', inst
+
+    # run post-create plugins after validation
+    # but before returning
+    postCreate = (plugin, cb)->
+      plugin inst, (err)->
+        cb err, inst
+    async.each inst.plugins.post.create, postCreate, (err, results)->
+      if err
+        stop = err
+    if stop
+      return null
     inst
 
   get: (key, callback)->
@@ -80,10 +102,28 @@ exports.ProtoModel = ProtoModel =
     self = @
     if not self.key
       return callback errmsg:'no key'
+
+    preDel = (plugin, cb)->
+      plugin self, (err)->
+        cb err, self
+    cont = true
+    async.each self.plugins.pre.del, preDel, (err, results)->
+      if err
+        cont = false
+        callback err, self
+    if not cont
+      return
     self.emit 'delete', self
     con.del bucket:self.bucket, key:self.key, (reply)->
       self.deleted = true
-      callback null, reply
+      if self.plugins.post.del.length
+        postDel = (plugin, cb)->
+          plugin self, (err)->
+            cb err, self
+        async.each self.plugins.post.del, postDel, (err, results)->
+          callback err, self
+      else
+        callback null, self
 
   save: (options, callback)->
     if typeof options == 'function'
@@ -101,19 +141,16 @@ exports.ProtoModel = ProtoModel =
     else
       @invalid = false
 
-    before = for plugin in self.plugins.pre.save
-      do(plugin)->
-        (cb)->
-          plugin (err)->
-            if err
-              throw new Error err
-            cb()
-
-    async.series before, (err, results)->
-      #console.log 'before ran all', err, results
-
-    op = if self.key then 'update' else 'insert'
-
+    cont = true
+    preSave = (plugin, cb)->
+      plugin self, (err)->
+        cb err, self
+    async.each self.plugins.pre.save, preSave, (err, results)->
+      if err
+        cont = false
+        callback err, self
+    if not cont
+      return
     content =
       value: JSON.stringify self.doc
       content_type: 'application/json'
@@ -131,22 +168,19 @@ exports.ProtoModel = ProtoModel =
     if self.vclock?
       request.vclock = self.vclock
 
+    op = if self.key then 'update' else 'insert'
     self.connection.put request, (reply)->
-      #console.log 'saved', reply
-      self.key = reply.key
+      self.key = reply.key if reply.key
       self.emit op, self
 
-      after = for plugin in self.plugins.post.save
-        do(plugin)->
-          (cb)->
-            plugin (err)->
-              cb err, self
-
-      async.series after, (err, results)->
-        #callback null, self
-
-      # weak:
-      callback null, self
+      if self.plugins.post.save.length
+        postSave = (plugin, cb)->
+          plugin self, (err)->
+            cb err, self
+        async.each self.plugins.post.save, postSave, (err, results)->
+          callback err, self
+      else
+        callback null, self
 
   toJSON: ->
     @doc
@@ -156,12 +190,12 @@ exports.ProtoModel = ProtoModel =
 
   pre: (kwd, callable)->
     if not @plugins.pre[kwd]?
-      throw new Error "Schema does not support pre #{kwd}"
+      throw new Error "Model does not support pre #{kwd}"
     @plugins.pre[kwd].push callable
 
   post: (kwd, callable)->
     if not @plugins.post[kwd]?
-      throw new Error "Schema does not support post #{kwd}"
+      throw new Error "Model does not support post #{kwd}"
     @plugins.post[kwd].push callable
 
   relate: (tag, obj)->

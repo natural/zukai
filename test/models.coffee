@@ -16,7 +16,7 @@ describe 'Model', ->
         createModel()
         assert 0
       catch err
-        assert err.message == 'Schema name required'
+        assert err.message == 'Model name required'
 
     it 'should work with only a name', ->
       Foo = createModel name:'foo'
