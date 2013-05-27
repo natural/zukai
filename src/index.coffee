@@ -62,7 +62,7 @@ exports.ProtoModel =
       return null
 
     res = jsonschema.validate inst.doc, @schema
-    if res.errors.length
+    if res.errors and res.errors.length
       inst.invalid = res
       inst.doc = {}
     else
@@ -146,7 +146,7 @@ exports.ProtoModel =
 
     res = jsonschema.validate @doc, @schema
 
-    if res.errors.length
+    if res.errors and res.errors.length
       @invalid = res
       return callback errmsg:'invalid'
     else
