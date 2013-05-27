@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "test": "cd ./test && make",
-    "prepublish": "./node_modules/coffee-script/bin/coffee -c  -o ./lib/ ./src/*.coffee && cp -r ./src/Object.observe ./lib/"
+    "prepublish": "./node_modules/coffee-script/bin/coffee -c  -o ./lib/ ./src/*.coffee"
   },
   "repository": {
     "type": "git",
@@ -23,14 +23,14 @@
   "readmeFilename": "README.md",
   "devDependencies": {
     "coffee-script": "~1.6.1",
-    "mocha": "~1.8.2"
+    "mocha": "~1.8.2",
+    "lodash": "~1.2.1"
   },
   "dependencies": {
     "inflection": "~1.2.5",
     "underscore": "~1.4.4",
-    "jsonschema": "git://github.com/tdegrunt/jsonschema.git#d3ad55c1bf0d096a2b388b016bf28cda59cc3a4f",
-    "JSONPath": "~0.9.1",
     "async": "~0.2.6",
-    "riakpbc": "0.0.12"
+    "riakpbc": "0.0.12",
+    "jsonschema": "~0.3.2"
   }
 }

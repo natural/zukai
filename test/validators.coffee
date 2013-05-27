@@ -408,7 +408,7 @@ describe 'Validators', ->
       assert not instance.invalid
       done()
 
-    it 'should not validate when invalid', (done)->
+    it.skip 'should not validate when invalid', (done)->
       assert Model
       instance = Model.create val:{bar:3}
       #assert instance.invalid
