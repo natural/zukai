@@ -1,5 +1,5 @@
 assert = require 'assert'
-{isEqual} = require 'lodash'
+{isEqual} = require 'underscore'
 {createModel} = require '../src'
 
 

@@ -26,11 +26,10 @@
     "mocha": "~1.8.2"
   },
   "dependencies": {
-    "lodash": "~1.2.1",
     "inflection": "~1.2.5",
-    "underscore": "~1.4.4",
     "async": "~0.2.6",
     "riakpbc": "0.0.12",
-    "jsonschema": "~0.3.2"
+    "jsonschema": "~0.3.2",
+    "underscore": "~1.4.4"
   }
 }
