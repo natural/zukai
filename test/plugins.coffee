@@ -49,7 +49,7 @@ describe 'Plugins', ->
           next 'fail'
       m = Model.create 'pre-save-error', name:'dave', age:88
       m.save (err, object)->
-        assert err == 'fail'
+        assert err.message == 'fail'
         done()
 
     it 'post-save should work', (done)->
@@ -68,7 +68,7 @@ describe 'Plugins', ->
           next 'fail'
       m = Model.create 'post-save-error', name:'frank', age:101
       m.save (err, object)->
-        assert err == 'fail'
+        assert err.message == 'fail'
         m.del done
 
 
@@ -90,7 +90,7 @@ describe 'Plugins', ->
       m = Model.create 'pre-del-error', name:'harry', age:33
       m.save ->
         m.del (err, object)->
-          assert err == 'fail'
+          assert err.message == 'fail'
           Model.plugins.pre.del = []
           m.del done
 
@@ -121,32 +121,34 @@ describe 'Plugins', ->
       Model.plugin (model, options)->
         model.pre 'create', (object, next)->
           assert object.doc.name == 'kate'
-          next()
+          #next()
           done()
       m = Model.create 'pre-create', name:'kate', age:66
       assert m.doc.name == 'kate'
 
     it 'pre-create should propagate errors', (done)->
       Model.plugin (model, options)->
-        model.pre 'create', (object, next)->
-          next 'fail'
-      m = Model.create 'pre-create-error', name:'larry', age:77
-      assert m == null
-      done()
+        model.pre 'create', (object)->
+          throw new Error
+      try
+        m = Model.create 'pre-create-error', name:'larry', age:77
+      catch err
+        done()
 
     it 'post-create should work', (done)->
       Model.plugin (model, options)->
-        model.post 'create', (object, next)->
+        model.post 'create', (object)->
           assert object.doc.name == 'moe'
-          next()
-          done()
+          object.doc.name = 'mose'
       m = Model.create 'post-create', name:'moe', age:88
-      assert m.doc.name == 'moe'
+      assert m.doc.name == 'mose'
+      done()
 
     it 'post-create should propagate errors', (done)->
       Model.plugin (model, options)->
-        model.post 'create', (object, next)->
-          next 'fail'
-      m = Model.create 'post-create-error', name:'ned', age:99
-      assert m == null
-      done()
+        model.post 'create', (object)->
+          throw new Error
+      try
+        m = Model.create 'post-create-error', name:'ned', age:99
+      catch err
+        done()
