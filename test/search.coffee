@@ -25,13 +25,13 @@ describe 'Search', ->
       alice = Model.create name:'alice', age:21
       assert alice.doc.name == 'alice'
 
-      alice.save (err, inst1)->
+      alice.put().then (inst1)->
         assert inst1
 
         bob = Model.create name:'bob', age:34
         assert bob.doc.name == 'bob'
 
-        bob.save (err, inst2)->
+        bob.put().then (inst2)->
           assert inst2
 
           Model.search name:'bob', (err, cursor)->

@@ -50,7 +50,7 @@ describe 'Model', ->
       Some = createModel
         name: 'Some'
       x = Some.create {}
-      assert x.save
+      assert x.put
 
     it 'should have a specified method', ->
       Again = createModel
@@ -102,9 +102,9 @@ describe 'Model', ->
               type: 'string'
       c = Core.create name:'coar'
       assert c
-      c.save {}, (err, doc)->
+      c.put({}).catch (err)->
         assert err
-        assert not doc
+        #assert not doc
         done()
 
     it 'should work when connection is present', (done)->
@@ -117,8 +117,7 @@ describe 'Model', ->
             name:
               type: 'string'
       c = Lore.create name:'loar'
-      c.save {}, (err, doc)->
-        assert not err
+      c.put({}).then (doc)->
         assert doc
         c.del().then done
 
@@ -133,8 +132,7 @@ describe 'Model', ->
               type: 'string'
 
       instance = Model.create name:'goar'
-      instance.save (err, inst)->
-        assert not err
+      instance.put().then (inst)->
         assert inst
         Model.get(inst.key).then (doc)->
           assert doc

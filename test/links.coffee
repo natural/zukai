@@ -28,14 +28,12 @@ describe 'Links', ->
     it 'should save and resolve one link', (done)->
       tag = 'relation-type'
       primary = PrimaryModel.create 'key-1', a:1, b:2
-      primary.save (err, object)->
-        assert not err
+      primary.put().then (object)->
         assert object.key == primary.key
 
         secondary = SecondaryModel.create 'key-2', c:3, d:4
         secondary.relate tag, primary
-        secondary.save (err, object)->
-          assert not err
+        secondary.put().then (object)->
           assert object.key == secondary.key
 
           links = secondary.links
@@ -60,20 +58,18 @@ describe 'Links', ->
       tag = 'multi-type'
 
       primary = PrimaryModel.create 'key-4', a:1, b:2
-      primary.save (err, p)->
-        assert not err
+      primary.put().then (p)->
         assert p.key == primary.key
 
         secondary = SecondaryModel.create 'key-5', c:3, d:4
-        secondary.save (err, q)->
-          assert not err
+        secondary.put().then (q)->
           assert q.key == secondary.key
 
           tertiary = TertiaryModel.create 'key-6', e:5, f:6
           tertiary.relate tag, primary
           tertiary.relate tag, secondary
 
-          tertiary.save (err, t)->
+          tertiary.put().then (t)->
             assert t.key == tertiary.key
 
             TertiaryModel.get('key-6').then (t)->

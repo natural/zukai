@@ -22,7 +22,7 @@ describe 'Methods', ->
 
   describe 'save when', ->
     it 'should not return an error', (done)->
-      instance.save (err, inst)->
+      instance.put().then (inst)->
         assert inst.key == instance.key
         done()
 
@@ -30,8 +30,7 @@ describe 'Methods', ->
     it 'should not return an error', (done)->
       newval = 4321
       instance.doc.val = newval
-      instance.save (err, inst)->
-        assert not err
+      instance.put().then (inst)->
         assert inst.key == instance.key
 
         Model.get(instance.key).then (other)->

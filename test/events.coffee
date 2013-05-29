@@ -35,8 +35,7 @@ describe 'Events', ->
         Model.removeAllListeners 'delete'
         done()
       alice = Model.create name:'alice', age:21
-      alice.save (err, doc)->
-        assert not err
+      alice.put().then ->
         alice.del().then(->)
 
   describe 'save event', ->
@@ -46,6 +45,5 @@ describe 'Events', ->
         Model.removeAllListeners 'save'
         done()
       alice = Model.create name:'alice', age:21
-      alice.save (err, doc)->
-        assert not err
+      alice.put().then ->
         alice.del().then(->)

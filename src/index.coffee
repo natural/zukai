@@ -122,10 +122,13 @@ exports.ProtoModel =
     deferred.promise
 
 
-  save: (options, callback)->
+  put: (options, callback)->
     self = @
+    deferred = defer()
+
     if not self.connection
-      return callback message: 'Not connected'
+      deferred.reject message: 'Not connected'
+      return deferred.promise
 
     if typeof options == 'function'
       callback = options
@@ -134,7 +137,8 @@ exports.ProtoModel =
 
     if res.errors and res.errors.length
       self.invalid = res
-      return callback message: 'Invalid'
+      deferred.reject message: 'Invalid'
+      return deferred.promise
 
     hooks = self.getHooks 'pre', 'save'
     run = (hook, cb)->
@@ -142,7 +146,7 @@ exports.ProtoModel =
         cb err, self
     async.each hooks, run, (err, results)->
       if err
-        return callback message: err
+        return deferred.reject message: err
 
       request =
         bucket: self.bucket
@@ -158,7 +162,7 @@ exports.ProtoModel =
 
       self.connection.put request, (reply)->
         if reply.errmsg
-          return callback message: errmsg
+          return deferred.reject message: errmsg
 
         self.key = reply.key if reply.key
         self.reply = reply
@@ -170,12 +174,14 @@ exports.ProtoModel =
 
         async.each hooks, run, (err, results)->
           if err
-            err = message: err
             self.invalid = true
+            deferred.reject message: err
           else
             self.invalid = false
-          self.emit 'save', self
-          callback err, self
+            self.emit 'save', self
+            deferred.resolve self
+
+    deferred.promise
 
   toJSON: ->
     @doc
@@ -226,7 +232,7 @@ exports.ProtoModel =
       model = models[link.bucket]
       if model
         model.get(link.key).then (doc)->
-          cb null, doc
+          cb null, doc # wrong
       else
         cb message: "No model registered for #{link.bucket}"
 

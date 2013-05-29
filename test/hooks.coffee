@@ -40,7 +40,7 @@ describe 'Plugins', ->
           next()
           done()
       m = Model.create 'pre-save', name:'carol', age:77
-      m.save ->
+      m.put().then ->
         m.del().then()
 
     it 'pre-save should propagate errors', (done)->
@@ -48,7 +48,7 @@ describe 'Plugins', ->
         model.pre 'save', (object, next)->
           next 'fail'
       m = Model.create 'pre-save-error', name:'dave', age:88
-      m.save (err, object)->
+      m.put().catch (err)->
         assert err.message == 'fail'
         done()
 
@@ -59,7 +59,7 @@ describe 'Plugins', ->
           next()
           done()
       m = Model.create 'post-save', name:'ed', age:99
-      m.save ->
+      m.put().then ->
         m.del().then()
 
     it 'post-save should propagate errors', (done)->
@@ -67,7 +67,7 @@ describe 'Plugins', ->
         model.post 'save', (object, next)->
           next 'fail'
       m = Model.create 'post-save-error', name:'frank', age:101
-      m.save (err, object)->
+      m.put().catch (err)->
         assert err.message == 'fail'
         m.del().then done
 
@@ -80,7 +80,7 @@ describe 'Plugins', ->
           next()
           done()
       m = Model.create 'pre-del', name:'gene', age:22
-      m.save ->
+      m.put().then ->
         m.del().then()
 
     it 'pre-delete should propagate errors', (done)->
@@ -88,7 +88,7 @@ describe 'Plugins', ->
         model.pre 'del', (object, next)->
           next 'fail'
       m = Model.create 'pre-del-error', name:'harry', age:33
-      m.save ->
+      m.put().then ->
         ok = ->
           assert 0
         er = (err)->
@@ -104,7 +104,7 @@ describe 'Plugins', ->
           next()
           done()
       m = Model.create 'post-del', name:'iris', age:44
-      m.save ->
+      m.put().then ->
         m.del().then()
 
     it 'post-delete should propagate errors', (done)->
@@ -112,7 +112,7 @@ describe 'Plugins', ->
         model.post 'del', (object, next)->
           next 'fail'
       m = Model.create 'post-del-error', name:'james', age:55
-      m.save (err)->
+      m.put().then ->
         ok = ->
           assert 0
         er = (err)->

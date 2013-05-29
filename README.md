@@ -151,7 +151,7 @@ Read the value at the given key from the model's bucket.
   * `callback`, required function, called with `(error, object)` after read
   is complete.
 
-`object.save(callback)`
+`object.put(callback)`
 
 Save the model object.
 
