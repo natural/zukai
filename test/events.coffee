@@ -39,29 +39,13 @@ describe 'Events', ->
         assert not err
         alice.del (->)
 
-  describe 'insert event', ->
+  describe 'save event', ->
     it 'should fire', (done)->
-      Model.on 'insert', (inst)->
+      Model.on 'save', (inst)->
         assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'insert'
+        Model.removeAllListeners 'save'
         done()
       alice = Model.create name:'alice', age:21
       alice.save (err, doc)->
         assert not err
         alice.del (->)
-
-
-  describe 'update event', ->
-    it 'should fire', (done)->
-      Model.on 'update', (inst)->
-        assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'update'
-        done()
-
-      alice = Model.create name:'alice', age:21
-      alice.save (err, doc)->
-        assert not err
-        alice.doc.age = 42
-        alice.save (err, doc)->
-          assert not err
-          alice.del (->)

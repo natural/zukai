@@ -1,5 +1,5 @@
 {EventEmitter} = require 'events'
-{clone, extend} = require 'underscore'
+{extend} = require 'underscore'
 
 async = require 'async'
 inflection = require 'inflection'
@@ -21,7 +21,7 @@ exports.createModel = (defn)->
     connection: defn.connection or null
     schema: defn.schema or {}
     bucket: bucket
-    plugins:
+    hooks:
       pre:  {create:[], save:[], del:[]}
       post: {create:[], save:[], del:[]}
 
@@ -46,83 +46,74 @@ exports.ProtoModel =
       doc = key
       key = null
 
-    inst = extend {}, self, {key:key, doc:doc, links:[]}
+    inst = extend {}, self, key: key, doc: doc, links: [], reply: {}
     self.setDefaults self.schema, inst.doc
 
-    for plugin in inst.plugins.pre.create
-      plugin inst
+    for hook in inst.hooks.pre.create
+      hook inst
 
     res = jsonschema.validate inst.doc, self.schema
     if res.errors and res.errors.length
-      inst.invalid = res
-      inst.doc = {}
+      extend inst, invalid: res, doc: {}
     else
       inst.invalid = false
+      for hook in inst.hooks.post.create
+        hook inst
       self.emit 'create', inst
-      # run post-create plugins after validation
-      # but before returning
-      for plugin in inst.plugins.post.create
-        plugin inst
-
     inst
 
   get: (key, callback)->
     self = @
     if not self.connection
-      return callback message: 'Not Connected'
+      return callback message: 'Not connected'
 
-    # { content:
-    #    [ { value: '{"e":5,"f":6}',
-    #        content_type: 'application/json',
-    #        vtag: '58VwhV1xnOUOKl8VjT1Uj3',
-    #        links: [Object],
-    #        last_mod: 1369679311,
-    #        last_mod_usecs: 898272 } ],
-    #   vclock: <Buffer 6b ce ... 2c 00> }
+    self.connection.get bucket: self.bucket, key: key, (reply)->
+      if reply and reply.errmsg
+        callback message: reply.errmsg
 
-    self.connection.get bucket:self.bucket, key:key, (reply)->
-      if reply and reply.content and reply.content[0]
-        inst = self.create JSON.parse reply.content[0].value, reply
-        inst.links = reply.content[0].links
-        inst.reply = reply
-        inst.key = key
+      else if reply and reply.content
+        objects = for result in reply.content
+          inst = self.create key, JSON.parse result.value
+          extend inst, links: result.links, reply: reply, key: key
+        objects = objects[0] if objects.length == 1
+        callback null, objects
+
       else
-        inst = null
-      callback null, inst
+        callback null, null
 
   del: (callback)->
     self = @
     if not self.connection
-      return callback message: 'Not Connected'
+      return callback message: 'Not connected'
 
     if not self.key
-      return callback message: 'No Key'
+      return callback message: 'No key'
 
-    plugins = self.getPlugins 'pre', 'del'
-    run = (plugin, cb)->
-      plugin self, (err)->
+    hooks = self.getHooks 'pre', 'del'
+    run = (hook, cb)->
+      hook self, (err)->
         cb err, self
-    async.each plugins, run, (err, results)->
+    async.each hooks, run, (err, results)->
       if err
-        callback message: err
-      else
-        self.connection.del bucket: self.bucket, key: self.key, (reply)->
-          if reply.errmsg
-            callback message: reply.errmsg
-          else
-            self.deleted = true
-            self.emit 'delete', self
-            plugins = self.getPlugins 'post', 'del'
-            run = (plugin, cb)->
-              plugin self, (err)->
-                cb err, self
-            async.each plugins, run, (err, results)->
-              callback err, self
+        return callback message: err
+      self.connection.del bucket: self.bucket, key: self.key, (reply)->
+        if reply.errmsg
+          return callback message: reply.errmsg
+        self.deleted = true
+        hooks = self.getHooks 'post', 'del'
+        run = (hook, cb)->
+          hook self, (err)->
+            cb err, self
+        async.each hooks, run, (err, results)->
+          if err
+            err = message: err
+          self.emit 'delete', self
+          callback err, self
 
   save: (options, callback)->
     self = @
     if not self.connection
-      return callback message: 'Not Connected'
+      return callback message: 'Not connected'
 
     if typeof options == 'function'
       callback = options
@@ -132,49 +123,47 @@ exports.ProtoModel =
     if res.errors and res.errors.length
       self.invalid = res
       return callback message: 'Invalid'
-    else
-      self.invalid = false
 
-    plugins = self.getPlugins 'pre', 'save'
-    run = (plugin, cb)->
-      plugin self, (err)->
+    hooks = self.getHooks 'pre', 'save'
+    run = (hook, cb)->
+      hook self, (err)->
         cb err, self
-
-    async.each plugins, run, (err, results)->
+    async.each hooks, run, (err, results)->
       if err
-        callback message: err
-      else
-        content =
+        return callback message: err
+
+      request =
+        bucket: self.bucket
+        return_body: true
+        content:
           value: JSON.stringify self.doc
           content_type: 'application/json'
           indexes: self.indexes
           links: self.links
 
-        request =
-          bucket: self.bucket
-          content: content
-          return_body: true
+      request.key = self.key if self.key?
+      request.vclock = self.reply?vclock if self.reply?vclock?
 
-        if self.key
-          request.key = self.key
-        if self.vclock?
-          request.vclock = self.vclock
-        op = if self.key then 'update' else 'insert'
+      self.connection.put request, (reply)->
+        if reply.errmsg
+          return callback message: errmsg
 
-        self.connection.put request, (reply)->
-          if reply.errmsg
-            callback message: errmsg
+        self.key = reply.key if reply.key
+        self.reply = reply
+
+        hooks = self.getHooks 'post', 'save'
+        run = (hook, cb)->
+          hook self, (err)->
+            cb err, self
+
+        async.each hooks, run, (err, results)->
+          if err
+            err = message: err
+            self.invalid = true
           else
-            self.key = reply.key if reply.key
-            self.emit op, self
-            plugins = self.getPlugins 'post', 'save'
-            run = (plugin, cb)->
-              plugin self, (err)->
-                cb err, self
-            async.each plugins, run, (err, results)->
-              if err
-                err = message: err
-              callback err, self
+            self.invalid = false
+          self.emit 'save', self
+          callback err, self
 
   toJSON: ->
     @doc
@@ -183,20 +172,20 @@ exports.ProtoModel =
     plugin @, options
 
   pre: (kwd, callable)->
-    if not @plugins.pre[kwd]?
+    if not @hooks.pre[kwd]?
       throw new Error "Model does not support pre #{kwd}"
-    @plugins.pre[kwd].push callable
+    @hooks.pre[kwd].push callable
 
   post: (kwd, callable)->
-    if not @plugins.post[kwd]?
+    if not @hooks.post[kwd]?
       throw new Error "Model does not support post #{kwd}"
-    @plugins.post[kwd].push callable
+    @hooks.post[kwd].push callable
 
-  getPlugins: (type, kwd)->
-    plugins = @plugins[type][kwd]
-    if not plugins.length
-      plugins = [(o, n)-> n()]
-    plugins
+  getHooks: (type, kwd)->
+    hooks = @hooks[type][kwd]
+    if not hooks.length
+      hooks = [(o, n)-> n()]
+    hooks
 
   relate: (tag, obj, dupes=false)->
     relation = tag:tag, key:obj.key, bucket:obj.bucket
@@ -215,18 +204,20 @@ exports.ProtoModel =
     links = (link for link in self.links when link.tag==tag)
 
     if not links.length
-      return callback null, links
+      return callback null, null
 
-    fetch = for link in links
-      do(link)->
-        (cb)->
-          for name, model of self.registry
-            if model.bucket == link.bucket
-              model.get link.key, (err, obj)->
-                cb null, obj
+    models = {}
+    for name, model of self.registry
+      models[model.bucket] = model
 
-    async.parallel fetch, (err, results)->
-      callback err, results
+    fetch = (link, cb)->
+      model = models[link.bucket]
+      if model
+        model.get link.key, cb
+      else
+        cb message: "No model registered for #{link.bucket}"
+
+    async.map links, fetch, callback
 
   setDefaults: (schema, doc)->
     for name, prop of schema.properties
@@ -241,17 +232,17 @@ exports.ProtoModel =
     switch typeof val
       when 'function'
         val = val()
-      #when 'object'
-      #  val = clone val
     val
 
 
-
-        # { content:
-        #    [ { value: '{"e":5,"f":6}',
-        #        content_type: 'application/json',
-        #        vtag: '58VwhV1xnOUOKl8VjT1Uj3',
-        #        links: [Object],
-        #        last_mod: 1369679311,
-        #        last_mod_usecs: 898272 } ],
-        #   vclock: <Buffer 6b ce ... 2c 00> }
+# For reference, a reply object from riakpbc looks like this:
+#
+# { content:
+#    [ { value: '{"e":5,"f":6}',
+#        content_type: 'application/json',
+#        vtag: '58VwhV1xnOUOKl8VjT1Uj3',
+#        links: [Object],
+#        last_mod: 1369679311,
+#        last_mod_usecs: 898272 } ],
+#   vclock: <Buffer 6b ce ... 2c 00> }
+#

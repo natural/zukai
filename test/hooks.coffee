@@ -91,7 +91,7 @@ describe 'Plugins', ->
       m.save ->
         m.del (err, object)->
           assert err.message == 'fail'
-          Model.plugins.pre.del = []
+          Model.hooks.pre.del = []
           m.del done
 
     it 'post-delete should work', (done)->
@@ -111,8 +111,8 @@ describe 'Plugins', ->
       m = Model.create 'post-del-error', name:'james', age:55
       m.save (err)->
         m.del (err, object)->
-          assert err == 'fail'
-          Model.plugins.post.del = []
+          assert err.message == 'fail'
+          Model.hooks.post.del = []
           m.del done
 
 

@@ -11,35 +11,101 @@ Example
 -------
 
 ```
-  {createModel} = require 'zukai'
+{createModel} = require 'zukai'
 
-  Book = createModel
-    name: 'Book'
-    bucket: 'books'
-    schema:
-      properties:
-        title:
-          type: 'string'
-          required: true
+Book = createModel
+  name: 'Book'
+  bucket: 'books'
+  schema:
+    properties:
+      title:
+        type: 'string'
+        required: true
 
-  bell = Book.create title:'For Whom the Bell Tolls'
+bell = Book.create title: 'For Whom the Bell Tolls'
 ```
 
 Plugins
 -------
 
-Models have the concept of plugins, functions called at various points in the
-life cycle of model objects.
+Plugins are reusable components.  Example
+
+```
+authorPlugin = (model, options)->
+  model.schema.properties.author =
+    type: 'string'
+    required: true
+
+Books.plugin authorPlugin
+```
+
+
+Hooks
+-----
+
+Hooks are functions that are called at various points in the life cycle of
+objects.
+
+  * `model.pre('create', callback)`
+
+  Pre-create hooks are run after a new object is created and default properties
+  are set, but before the object document is validated.
+
+  * `model.post('create', callback)`
+
+  Post-create hooks are run after the object document is validated but before
+  the object is returned from the `create` function.
+
+  * `model.pre('del', callback)`
+
+  Pre-delete hooks are run before the object is removed from the bucket.  If
+  a hook indicates an error (by calling `next()` with a value), the object
+  will not be removed.
+
+  * `model.post('del', callback)`
+
+  Post-delete hooks are run after the object is successfully removed from the
+  bucket, but before the callback to `del` is run.
+
+  * `model.pre('save', callback)`
+
+  Pre-save hooks are run before the object is put to the bucket.  If the hook
+  indicates an error, the object will not be saved.
+
+  * `model.post('save', callback)`
+
+  Post-save hooks are run after the object is successfully put the the bucket,
+  but before the callback to `save` is run.
+
+
+Pre- and post-create callbacks are synchronous and are passed only one value,
+the object.  All others are asynchronous and are passed two values, the object
+as the first, and the continuation callback as the second.
+
+
 
 Events
 ------
 
 Model objects emit the following events:
 
-  * `delete`
-  * `update`
-  * `insert`
   * `create`
+
+  The `create` event is emitted after the object has been fully instantiated and
+  validated, and after all of the post-create hooks have run.
+
+  * `delete`
+
+  The `delete` event is emitted after the object is removed from the bucket and
+  after all post-delete hooks have run.  The delete event is emitted even when a
+  post-delete hook indicates an error.
+
+  * `save`
+
+  The `save` event is emitted after the object is put to the bucket and after
+  all post-save hooks have run.  The save event is emitted even when a post-save
+  hook indicates an error.
+
 
 In each case, the object is the only parameter to the event.
 
@@ -121,7 +187,7 @@ returns the `object.doc` value.
 `object.plugin(factory, options)`
 
 Runs the plugin factory, passing the Model and options objects to it.  See the
-Plugins section below.
+Plugins section above.
 
 `object.relate(tag, target, [dupes=false])`
 
@@ -134,12 +200,13 @@ Retrieves the model objects(s) associated with this one by the named tag.  The
 callback is called with `(err, objects)` where `objects` is an array of found
 model objects.
 
+
 Internals
 ---------
 
 I don't believe in hiding code behind private qualifiers, explicit or implicit,
-enforced or not.  So you get the following, and note that these may change or
-disappear:
+enforced or not.  So you get the following, but note that these may change or
+even disappear:
 
 `Model.registry` and `object.registry`
 
