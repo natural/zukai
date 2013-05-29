@@ -1,7 +1,8 @@
 {
   "name": "zukai",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "Riak ODM for Node.js",
+  "homepage": "https://github.com/natural/zukai",
   "main": "lib/index.js",
   "scripts": {
     "test": "cd ./test && make",
@@ -18,12 +19,16 @@
     "model",
     "schema"
   ],
-  "author": "Troy Melhase",
-  "license": "MIT",
+  "author": "Troy Melhase <troy@troy.io> (https://github.com/natural)",
+  "license": "Apache",
   "readmeFilename": "README.md",
   "devDependencies": {
     "coffee-script": "~1.6.1",
     "mocha": "~1.8.2"
+  },
+  "bugs": {
+    "url" : "https://github.com/natural/zukai/issues",
+    "email" : "troy@troy.io"
   },
   "dependencies": {
     "inflection": "~1.2.5",
