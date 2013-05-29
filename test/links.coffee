@@ -54,8 +54,9 @@ describe 'Links', ->
             assert doc.key == primary.key
             assert doc.bucket == primary.bucket
 
-            primary.del ->
-              secondary.del done
+            primary.del().then ->
+              secondary.del().then done
+
 
     it 'should save and resolve multiple links', (done)->
       tag = 'multi-type'
@@ -87,6 +88,6 @@ describe 'Links', ->
                 assert PrimaryModel.bucket in buckets
                 assert SecondaryModel.bucket in buckets
 
-                tertiary.del ->
-                  secondary.del ->
-                    primary.del done
+                tertiary.del().then ->
+                  secondary.del().then ->
+                    primary.del().then done

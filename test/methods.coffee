@@ -41,13 +41,15 @@ describe 'Methods', ->
 
   describe 'delete', ->
     it 'should not return an error', (done)->
-      instance.del (err)->
-        assert not err
-
+      ok = (reply)->
         Model.get instance.key, (err, other)->
           assert not err
           assert not other
           done()
+      er = (reason)->
+        assert 0
+      instance.del().then ok, er
+
 
   describe 'toJSON', ->
     it 'should return the document', ->
@@ -63,6 +65,7 @@ describe 'Methods', ->
         name: 'fruit'
         methods:
           del: (cb)->
+            # not promise based
             cb arg1, arg2
 
       grapes = Fruit.create()

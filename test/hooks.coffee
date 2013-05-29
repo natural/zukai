@@ -41,7 +41,7 @@ describe 'Plugins', ->
           done()
       m = Model.create 'pre-save', name:'carol', age:77
       m.save ->
-        m.del ->
+        m.del().then()
 
     it 'pre-save should propagate errors', (done)->
       Model.plugin (model, options)->
@@ -60,7 +60,7 @@ describe 'Plugins', ->
           done()
       m = Model.create 'post-save', name:'ed', age:99
       m.save ->
-        m.del ->
+        m.del().then()
 
     it 'post-save should propagate errors', (done)->
       Model.plugin (model, options)->
@@ -69,7 +69,7 @@ describe 'Plugins', ->
       m = Model.create 'post-save-error', name:'frank', age:101
       m.save (err, object)->
         assert err.message == 'fail'
-        m.del done
+        m.del().then done
 
 
   describe 'plugin delete events', ->
@@ -81,7 +81,7 @@ describe 'Plugins', ->
           done()
       m = Model.create 'pre-del', name:'gene', age:22
       m.save ->
-        m.del ->
+        m.del().then()
 
     it 'pre-delete should propagate errors', (done)->
       Model.plugin (model, options)->
@@ -89,10 +89,13 @@ describe 'Plugins', ->
           next 'fail'
       m = Model.create 'pre-del-error', name:'harry', age:33
       m.save ->
-        m.del (err, object)->
+        ok = ->
+          assert 0
+        er = (err)->
           assert err.message == 'fail'
           Model.hooks.pre.del = []
-          m.del done
+          m.del().then done
+        m.del().then ok, er
 
     it 'post-delete should work', (done)->
       Model.plugin (model, options)->
@@ -102,7 +105,7 @@ describe 'Plugins', ->
           done()
       m = Model.create 'post-del', name:'iris', age:44
       m.save ->
-        m.del ->
+        m.del().then()
 
     it 'post-delete should propagate errors', (done)->
       Model.plugin (model, options)->
@@ -110,10 +113,13 @@ describe 'Plugins', ->
           next 'fail'
       m = Model.create 'post-del-error', name:'james', age:55
       m.save (err)->
-        m.del (err, object)->
+        ok = ->
+          assert 0
+        er = (err)->
           assert err.message == 'fail'
           Model.hooks.post.del = []
-          m.del done
+          m.del().then done
+        m.del().then ok, er
 
 
   describe 'plugin create events', ->

@@ -37,7 +37,7 @@ describe 'Events', ->
       alice = Model.create name:'alice', age:21
       alice.save (err, doc)->
         assert not err
-        alice.del (->)
+        alice.del().then(->)
 
   describe 'save event', ->
     it 'should fire', (done)->
@@ -48,4 +48,4 @@ describe 'Events', ->
       alice = Model.create name:'alice', age:21
       alice.save (err, doc)->
         assert not err
-        alice.del (->)
+        alice.del().then(->)

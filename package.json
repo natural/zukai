@@ -27,14 +27,15 @@
     "mocha": "~1.8.2"
   },
   "bugs": {
-    "url" : "https://github.com/natural/zukai/issues",
-    "email" : "troy@troy.io"
+    "url": "https://github.com/natural/zukai/issues",
+    "email": "troy@troy.io"
   },
   "dependencies": {
     "inflection": "~1.2.5",
     "async": "~0.2.6",
     "riakpbc": "0.0.12",
     "jsonschema": "git://github.com/tdegrunt/jsonschema.git#d3ad55c1bf0d096a2b388b016bf28cda59cc3a4f",
-    "underscore": "~1.4.4"
+    "underscore": "~1.4.4",
+    "q": "~0.9.4"
   }
 }

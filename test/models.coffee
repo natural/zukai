@@ -120,7 +120,7 @@ describe 'Model', ->
       c.save {}, (err, doc)->
         assert not err
         assert doc
-        c.del done
+        c.del().then done
 
   describe 'working with model objects by key', ->
     it 'should allow Model.get', (done)->
@@ -140,11 +140,10 @@ describe 'Model', ->
           assert not err
           assert doc
           assert doc.doc.name == 'goar'
-          doc.del done
+          doc.del().then done
 
     it 'should allow instance.del', (done)->
-      instance.del (err, msg)->
-        assert not err
+      instance.del().then ->
         Model.get instance.key, (err, doc)->
           assert not err
           if doc

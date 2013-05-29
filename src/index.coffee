@@ -1,5 +1,6 @@
 {EventEmitter} = require 'events'
 {extend} = require 'underscore'
+{defer} = require 'q'
 
 async = require 'async'
 inflection = require 'inflection'
@@ -81,13 +82,17 @@ exports.ProtoModel =
       else
         callback null, null
 
-  del: (callback)->
+  del: ->
     self = @
+    deferred = defer()
+
     if not self.connection
-      return callback message: 'Not connected'
+      deferred.reject message: 'Not connected'
+      return deferred.promise
 
     if not self.key
-      return callback message: 'No key'
+      deferred.reject message: 'No key'
+      return deferred.promise
 
     hooks = self.getHooks 'pre', 'del'
     run = (hook, cb)->
@@ -95,20 +100,25 @@ exports.ProtoModel =
         cb err, self
     async.each hooks, run, (err, results)->
       if err
-        return callback message: err
+        deferred.reject message: err
+        return deferred.promise
       self.connection.del bucket: self.bucket, key: self.key, (reply)->
         if reply.errmsg
-          return callback message: reply.errmsg
-        self.deleted = true
-        hooks = self.getHooks 'post', 'del'
-        run = (hook, cb)->
-          hook self, (err)->
-            cb err, self
-        async.each hooks, run, (err, results)->
-          if err
-            err = message: err
-          self.emit 'delete', self
-          callback err, self
+          deferred.reject message: reply.errmsg
+        else
+          self.deleted = true
+          hooks = self.getHooks 'post', 'del'
+          run = (hook, cb)->
+            hook self, (err)->
+              cb err, self
+          async.each hooks, run, (err)->
+            self.emit 'delete', self
+            if err
+              deferred.reject message: err
+            else
+              deferred.resolve null
+    deferred.promise
+
 
   save: (options, callback)->
     self = @
