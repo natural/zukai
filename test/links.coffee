@@ -47,7 +47,6 @@ describe 'Links', ->
 
           object.resolve tag, (err, docs)->
             assert not err
-
             assert docs
             assert docs.length == 1
             doc = docs[0]
@@ -56,7 +55,6 @@ describe 'Links', ->
 
             primary.del().then ->
               secondary.del().then done
-
 
     it 'should save and resolve multiple links', (done)->
       tag = 'multi-type'
@@ -78,7 +76,7 @@ describe 'Links', ->
           tertiary.save (err, t)->
             assert t.key == tertiary.key
 
-            TertiaryModel.get 'key-6', (err, t)->
+            TertiaryModel.get('key-6').then (t)->
               assert t.key == tertiary.key
               assert t.links.length == 2
               t.resolve tag, (err, docs)->

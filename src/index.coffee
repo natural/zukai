@@ -63,24 +63,26 @@ exports.ProtoModel =
       self.emit 'create', inst
     inst
 
-  get: (key, callback)->
+  get: (key)->
     self = @
+    deferred = defer()
+
     if not self.connection
-      return callback message: 'Not connected'
+      deferred.reject message: 'Not connected'
+      return deferred.promise
 
     self.connection.get bucket: self.bucket, key: key, (reply)->
       if reply and reply.errmsg
-        callback message: reply.errmsg
-
+        deferred.reject message: reply.errmsg
       else if reply and reply.content
         objects = for result in reply.content
           inst = self.create key, JSON.parse result.value
           extend inst, links: result.links, reply: reply, key: key
         objects = objects[0] if objects.length == 1
-        callback null, objects
-
+        deferred.resolve objects
       else
-        callback null, null
+        deferred.resolve null
+    return deferred.promise
 
   del: ->
     self = @
@@ -223,7 +225,8 @@ exports.ProtoModel =
     fetch = (link, cb)->
       model = models[link.bucket]
       if model
-        model.get link.key, cb
+        model.get(link.key).then (doc)->
+          cb null, doc
       else
         cb message: "No model registered for #{link.bucket}"
 

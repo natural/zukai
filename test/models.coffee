@@ -136,16 +136,12 @@ describe 'Model', ->
       instance.save (err, inst)->
         assert not err
         assert inst
-        Model.get inst.key, (err, doc)->
-          assert not err
+        Model.get(inst.key).then (doc)->
           assert doc
           assert doc.doc.name == 'goar'
           doc.del().then done
 
     it 'should allow instance.del', (done)->
       instance.del().then ->
-        Model.get instance.key, (err, doc)->
-          assert not err
-          if doc
-            assert doc.deleted == 1
+        Model.get(instance.key).then (doc)->
           done()

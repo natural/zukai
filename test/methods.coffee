@@ -34,22 +34,19 @@ describe 'Methods', ->
         assert not err
         assert inst.key == instance.key
 
-        Model.get instance.key, (err, other)->
-          assert not err
+        Model.get(instance.key).then (other)->
           assert other.doc.val == newval
           done()
 
   describe 'delete', ->
     it 'should not return an error', (done)->
       ok = (reply)->
-        Model.get instance.key, (err, other)->
-          assert not err
+        Model.get(instance.key).then (other)->
           assert not other
           done()
       er = (reason)->
         assert 0
       instance.del().then ok, er
-
 
   describe 'toJSON', ->
     it 'should return the document', ->
