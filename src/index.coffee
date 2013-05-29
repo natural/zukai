@@ -217,12 +217,14 @@ exports.ProtoModel =
     if insert
       @links.push relation
 
-  resolve: (tag, callback)->
+  walk: (tag, callback)->
     self = @
+    deferred = defer()
     links = (link for link in self.links when link.tag==tag)
 
     if not links.length
-      return callback null, null
+      deferred.resolve()
+      return deferred.promise
 
     models = {}
     for name, model of self.registry
@@ -236,7 +238,12 @@ exports.ProtoModel =
       else
         cb message: "No model registered for #{link.bucket}"
 
-    async.map links, fetch, callback
+    async.map links, fetch, (err, results)->
+      if err
+        deferred.reject err
+      else
+        deferred.resolve results
+    return deferred.promise
 
   setDefaults: (schema, doc)->
     for name, prop of schema.properties

@@ -43,8 +43,7 @@ describe 'Links', ->
           assert link.key == primary.key
           assert link.bucket == primary.bucket
 
-          object.resolve tag, (err, docs)->
-            assert not err
+          object.walk(tag).then (docs)->
             assert docs
             assert docs.length == 1
             doc = docs[0]
@@ -75,8 +74,7 @@ describe 'Links', ->
             TertiaryModel.get('key-6').then (t)->
               assert t.key == tertiary.key
               assert t.links.length == 2
-              t.resolve tag, (err, docs)->
-                assert not err
+              t.walk(tag).then (docs)->
                 assert docs.length == 2
                 buckets = (doc.bucket for doc in docs)
                 assert PrimaryModel.bucket in buckets
