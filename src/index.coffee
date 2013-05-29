@@ -1,5 +1,5 @@
 {EventEmitter} = require 'events'
-{extend} = require 'underscore'
+{defaults, extend} = require 'underscore'
 {defer} = require 'q'
 
 async = require 'async'
@@ -19,26 +19,35 @@ exports.createModel = (defn)->
 
   options =
     name: name
-    connection: defn.connection or null
-    schema: defn.schema or {}
     bucket: bucket
+    connection: defn.connection or null
+    contentType: 'application/json'
     hooks:
       pre:  {create:[], save:[], del:[]}
       post: {create:[], save:[], del:[]}
+    indexes: []
+    schema: defn.schema or {}
 
   derived = extend (new EventEmitter()),
     exports.ProtoModel,
     (defn.methods or {}),
     options
 
-  derived.registry[bucket] = derived
+  ProtoModel.registry[bucket] = derived
 
 
-exports.ProtoModel =
+exports.ProtoModel = ProtoModel =
   name: 'ProtoModel'
-  connection: null
   bucket: 'undefined'
+  connection: null
+  contentType: 'application/json'
+  hooks:
+    pre:  {create:[], save:[], del:[]}
+    post: {create:[], save:[], del:[]}
   indexes: []
+  schema: {}
+
+  # shared:
   registry: {}
 
   create: (key, doc)->
@@ -63,38 +72,55 @@ exports.ProtoModel =
       self.emit 'create', inst
     inst
 
-  get: (key)->
+  get: (key, options, callback)->
     self = @
     deferred = defer()
 
     if not self.connection
       deferred.reject message: 'Not connected'
-      return deferred.promise
+      return deferred.promise.nodeify callback
 
-    self.connection.get bucket: self.bucket, key: key, (reply)->
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
+
+    request = bucket: self.bucket, key: key
+    defaults request, options, self.defaultGetOptions
+
+    self.connection.get request, (reply)->
       if reply and reply.errmsg
         deferred.reject message: reply.errmsg
       else if reply and reply.content
         objects = for result in reply.content
-          inst = self.create key, JSON.parse result.value
+          inst = self.create key, self.decode result.value
           extend inst, links: result.links, reply: reply, key: key
         objects = objects[0] if objects.length == 1
-        deferred.resolve objects
+        if options.walk and objects.links?
+          objects.walk(options.walk).then (refs)->
+            deferred.resolve [objects].concat refs
+        else
+          deferred.resolve objects
       else
         deferred.resolve null
-    return deferred.promise
+    deferred.promise.nodeify callback
 
-  del: ->
+  del: (options, callback)->
     self = @
     deferred = defer()
 
     if not self.connection
       deferred.reject message: 'Not connected'
-      return deferred.promise
+      return deferred.promise.nodeify callback
 
     if not self.key
       deferred.reject message: 'No key'
-      return deferred.promise
+      return deferred.promise.nodeify callback
+
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
 
     hooks = self.getHooks 'pre', 'del'
     run = (hook, cb)->
@@ -103,23 +129,27 @@ exports.ProtoModel =
     async.each hooks, run, (err, results)->
       if err
         deferred.reject message: err
-        return deferred.promise
-      self.connection.del bucket: self.bucket, key: self.key, (reply)->
-        if reply.errmsg
-          deferred.reject message: reply.errmsg
-        else
-          self.deleted = true
-          hooks = self.getHooks 'post', 'del'
-          run = (hook, cb)->
-            hook self, (err)->
-              cb err, self
-          async.each hooks, run, (err)->
-            self.emit 'delete', self
-            if err
-              deferred.reject message: err
-            else
-              deferred.resolve null
-    deferred.promise
+      else
+
+        request = bucket: self.bucket, key: self.key
+        defaults request, options, self.defaultDelOptions
+
+        self.connection.del request, (reply)->
+          if reply.errmsg
+            deferred.reject message: reply.errmsg
+          else
+            self.deleted = true
+            hooks = self.getHooks 'post', 'del'
+            run = (hook, cb)->
+              hook self, (err)->
+                cb err, self
+            async.each hooks, run, (err)->
+              self.emit 'delete', self
+              if err
+                deferred.reject message: err
+              else
+                deferred.resolve null
+    deferred.promise.nodeify callback
 
 
   put: (options, callback)->
@@ -128,17 +158,19 @@ exports.ProtoModel =
 
     if not self.connection
       deferred.reject message: 'Not connected'
-      return deferred.promise
+      return deferred.promise.nodeify callback
 
     if typeof options == 'function'
       callback = options
+    else if not options
+      options = {}
 
     res = jsonschema.validate self.doc, self.schema
 
     if res.errors and res.errors.length
       self.invalid = res
       deferred.reject message: 'Invalid'
-      return deferred.promise
+      return deferred.promise.nodeify callback
 
     hooks = self.getHooks 'pre', 'save'
     run = (hook, cb)->
@@ -150,13 +182,13 @@ exports.ProtoModel =
 
       request =
         bucket: self.bucket
-        return_body: true
         content:
-          value: JSON.stringify self.doc
-          content_type: 'application/json'
+          value: self.encode self.doc
+          content_type: self.contentType
           indexes: self.indexes
           links: self.links
 
+      defaults request, options, self.defaultPutOptions
       request.key = self.key if self.key?
       request.vclock = self.reply?vclock if self.reply?vclock?
 
@@ -181,10 +213,16 @@ exports.ProtoModel =
             self.emit 'save', self
             deferred.resolve self
 
-    deferred.promise
+    deferred.promise.nodeify callback
 
   toJSON: ->
     @doc
+
+  decode: (v)->
+    JSON.parse v
+
+  encode: (v)->
+    JSON.stringify v
 
   plugin: (plugin, options)->
     plugin @, options
@@ -220,8 +258,10 @@ exports.ProtoModel =
   walk: (tag, callback)->
     self = @
     deferred = defer()
-    links = (link for link in self.links when link.tag==tag)
-
+    if tag == '*'
+      links = self.links
+    else
+      links = (link for link in self.links when link.tag==tag)
     if not links.length
       deferred.resolve()
       return deferred.promise
@@ -260,6 +300,33 @@ exports.ProtoModel =
         val = val()
     val
 
+  defaultPutOptions:
+    vclock: null
+    w: 'default'
+    dw: 'default'
+    return_body: false
+    pw: 'default'
+    if_not_modified: false
+    if_none_match: false
+    return_head: false
+
+  defaultGetOptions:
+    r: 'default'
+    pr: 'default'
+    basic_quorum: false
+    notfound_ok: false
+    if_modified: null
+    head: false
+    deletedvclock: true
+
+  defaultDelOptions:
+    rw: 'default'
+    vclock: null
+    r: 'default'
+    w: 'default'
+    pr: 'default'
+    pw: 'default'
+    pd: 'default'
 
 # For reference, a reply object from riakpbc looks like this:
 #
