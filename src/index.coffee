@@ -1,41 +1,39 @@
 {EventEmitter2} = require 'eventemitter2'
-{defaults, extend} = require 'underscore'
+{defaults, each, extend} = require 'underscore'
 {defer} = require 'q'
-
 async = require 'async'
 inflection = require 'inflection'
 jsonschema = require 'jsonschema'
 
 
-exports.createModel = (defn, options)->
-  defn = defn or {}
-  name = defn.name
+exports.plugins = require('./plugins').plugins
+
+
+exports.createModel = (name, defn)->
+  if typeof name == 'object'
+    defn = name
+    name = defn.name
+  else if not defn
+    defn = {}
 
   if not name
     throw new TypeError 'Model name required'
 
-  bucket = defn.bucket
-  bucket = inflection.pluralize name.toLowerCase() if not bucket
-  server = new EventEmitter2 options?.eventServer
+  if not defn.bucket
+    defn.bucket = inflection.pluralize name.toLowerCase()
 
-  ProtoModel.registry[bucket] = extend server,
-    # extend the event emitter with the prototypical model
-    exports.ProtoModel,
-
-    # and any given methods.  is this needed still?
-    (defn.methods or {}),
-
-    # finally, layer on specific values
-    name: name
-    bucket: bucket
-    connection: defn.connection or null
-    contentType: 'application/json'
+  base =
     hooks:
-      pre:  {create:[], save:[], del:[]}
-      post: {create:[], save:[], del:[]}
+      pre:  {create:[], put:[], del:[]}
+      post: {create:[], put:[], del:[]}
     indexes: []
     schema: defn.schema or {}
 
+  server = new EventEmitter2 defn.events
+  delete defn.events
+
+  ProtoModel.registry[defn.bucket] = extend server,
+    exports.ProtoModel, base, defn
 
 
 exports.ProtoModel = ProtoModel =
@@ -44,22 +42,23 @@ exports.ProtoModel = ProtoModel =
   connection: null
   contentType: 'application/json'
   hooks:
-    pre:  {create:[], save:[], del:[]}
-    post: {create:[], save:[], del:[]}
+    pre:  {create:[], put:[], del:[]}
+    post: {create:[], put:[], del:[]}
   indexes: []
   schema: {}
 
   # shared:
   registry: {}
 
+
   create: (key, doc)->
     self = @
-    if (typeof key) == 'object'
+    if typeof key == 'object'
       doc = key
-      key = null
+      key = doc.key or null
 
     inst = extend {}, self, key: key, doc: doc, links: [], reply: {}
-    self.setDefaults self.schema, inst.doc
+    inst.setDefaults inst.schema, inst.doc
 
     for hook in inst.hooks.pre.create
       hook inst
@@ -74,7 +73,14 @@ exports.ProtoModel = ProtoModel =
       self.emit 'create', inst
     inst
 
+
   get: (key, options, callback)->
+    if typeof key == 'object'
+      options = key
+      key = options.key
+    if typeof options == 'function'
+      callback = options
+      options = {}
     self = @
     deferred = defer()
 
@@ -95,7 +101,11 @@ exports.ProtoModel = ProtoModel =
         deferred.reject message: reply.errmsg
       else if reply and reply.content
         objects = for result in reply.content
-          inst = self.create key, self.decode result.value
+          if not options.head
+            content = self.decode result.value
+          else
+            content = {}
+          inst = self.create key, content
           extend inst, links: result.links, reply: reply, key: key
         objects = objects[0] if objects.length == 1
         if options.walk and objects.links?
@@ -106,6 +116,7 @@ exports.ProtoModel = ProtoModel =
       else
         deferred.resolve null
     deferred.promise.nodeify callback
+
 
   del: (options, callback)->
     self = @
@@ -124,16 +135,15 @@ exports.ProtoModel = ProtoModel =
     else if not options
       options = {}
 
-    hooks = self.getHooks 'pre', 'del'
     run = (hook, cb)->
       hook self, (err)->
         cb err, self
-    async.each hooks, run, (err, results)->
+
+    async.each (self.getHooks 'pre', 'del'), run, (err, results)->
       if err
         deferred.reject message: err
       else
-
-        request = bucket: self.bucket, key: self.key
+        request = bucket: self.bucket, key: self.key, vclock: self.vclock
         defaults request, options, self.defaultDelOptions
 
         self.connection.del request, (reply)->
@@ -141,11 +151,8 @@ exports.ProtoModel = ProtoModel =
             deferred.reject message: reply.errmsg
           else
             self.deleted = true
-            hooks = self.getHooks 'post', 'del'
-            run = (hook, cb)->
-              hook self, (err)->
-                cb err, self
-            async.each hooks, run, (err)->
+            self.reply = reply
+            async.each (self.getHooks 'post', 'del'), run, (err)->
               self.emit 'delete', self
               if err
                 deferred.reject message: err
@@ -174,11 +181,11 @@ exports.ProtoModel = ProtoModel =
       deferred.reject message: 'Invalid'
       return deferred.promise.nodeify callback
 
-    hooks = self.getHooks 'pre', 'save'
     run = (hook, cb)->
       hook self, (err)->
         cb err, self
-    async.each hooks, run, (err, results)->
+
+    async.each (self.getHooks 'pre', 'put'), run, (err, results)->
       if err
         return deferred.reject message: err
 
@@ -192,7 +199,7 @@ exports.ProtoModel = ProtoModel =
 
       defaults request, options, self.defaultPutOptions
       request.key = self.key if self.key?
-      request.vclock = self.reply?vclock if self.reply?vclock?
+      request.vclock = self.reply?.vclock if self.reply?.vclock?
 
       self.connection.put request, (reply)->
         if reply.errmsg
@@ -201,62 +208,17 @@ exports.ProtoModel = ProtoModel =
         self.key = reply.key if reply.key
         self.reply = reply
 
-        hooks = self.getHooks 'post', 'save'
-        run = (hook, cb)->
-          hook self, (err)->
-            cb err, self
-
-        async.each hooks, run, (err, results)->
+        async.each (self.getHooks 'post', 'put'), run, (err, results)->
           if err
             self.invalid = true
             deferred.reject message: err
           else
             self.invalid = false
-            self.emit 'save', self
+            self.emit 'put', self
             deferred.resolve self
 
     deferred.promise.nodeify callback
 
-  toJSON: ->
-    @doc
-
-  decode: (v)->
-    JSON.parse v
-
-  encode: (v)->
-    JSON.stringify v
-
-  plugin: (plugin, options)->
-    plugin @, options
-    @
-
-  pre: (kwd, callable)->
-    if not @hooks.pre[kwd]?
-      throw new Error "Model does not support pre #{kwd}"
-    @hooks.pre[kwd].push callable
-
-  post: (kwd, callable)->
-    if not @hooks.post[kwd]?
-      throw new Error "Model does not support post #{kwd}"
-    @hooks.post[kwd].push callable
-
-  getHooks: (type, kwd)->
-    hooks = @hooks[type][kwd]
-    if not hooks.length
-      hooks = [(o, n)-> n()]
-    hooks
-
-  relate: (tag, obj, dupes=false)->
-    relation = tag:tag, key:obj.key, bucket:obj.bucket
-    insert = true
-
-    if not dupes
-      for item in @links when item.tag==tag
-        if item.key == obj.key and item.bucket==obj.bucket
-          insert = false
-
-    if insert
-      @links.push relation
 
   walk: (tag, callback)->
     self = @
@@ -288,20 +250,48 @@ exports.ProtoModel = ProtoModel =
         deferred.resolve results
     return deferred.promise
 
-  setDefaults: (schema, doc)->
-    for name, prop of schema.properties
-      if not doc[name]?
-        def = @getDefault prop
-        doc[name] = def if def isnt undefined
-        if prop.properties
-          @setDefaults prop, doc[name]
 
-  getDefault: (property)->
-    val = property.default
-    switch typeof val
-      when 'function'
-        val = val()
-    val
+  toJSON: ->
+    @doc
+
+
+  decode: (v)->
+    JSON.parse v
+
+
+  encode: (v)->
+    JSON.stringify v
+
+
+  plugin: (plugin, options)->
+    plugin @, options
+    @
+
+
+  pre: (kwd, callable)->
+    if not @hooks.pre[kwd]?
+      throw new Error "Model does not support pre #{kwd}"
+    @hooks.pre[kwd].push callable
+
+
+  post: (kwd, callable)->
+    if not @hooks.post[kwd]?
+      throw new Error "Model does not support post #{kwd}"
+    @hooks.post[kwd].push callable
+
+
+  relate: (tag, obj, dupes=false)->
+    relation = tag: tag, key: obj.key, bucket: obj.bucket
+    insert = true
+
+    if not dupes
+      for item in @links when item.tag==tag
+        if item.key == obj.key and item.bucket==obj.bucket
+          insert = false
+
+    if insert
+      @links.push relation
+
 
   defaultPutOptions:
     vclock: null
@@ -313,6 +303,7 @@ exports.ProtoModel = ProtoModel =
     if_none_match: false
     return_head: false
 
+
   defaultGetOptions:
     r: 'default'
     pr: 'default'
@@ -322,6 +313,7 @@ exports.ProtoModel = ProtoModel =
     head: false
     deletedvclock: true
 
+
   defaultDelOptions:
     rw: 'default'
     vclock: null
@@ -330,6 +322,27 @@ exports.ProtoModel = ProtoModel =
     pr: 'default'
     pw: 'default'
     pd: 'default'
+
+
+  getHooks: (type, kwd)->
+    hooks = @hooks[type][kwd]
+    if not hooks.length
+      [(o, n)-> n()]
+    else
+      hooks
+
+
+  setDefaults: (schema, doc)->
+    each schema.properties, (prop, name)->
+      if not doc[name]?
+        val = prop.default
+        if typeof val == 'function'
+          val = val()
+        if val isnt undefined
+          doc[name] = val
+        if prop.properties
+          @setDefaults prop, doc[name]
+
 
 # For reference, a reply object from riakpbc looks like this:
 #

@@ -13,7 +13,7 @@ exports.plugins =
     if min > max
       throw new Error 'Minimum cannot be greater than maximum'
 
-    model.pre 'save', (object, next)->
+    model.pre 'put', (object, next)->
       buckets = (b for b, m of model.registry when m.name==rel)
 
       if not buckets.length

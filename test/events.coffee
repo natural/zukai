@@ -38,12 +38,48 @@ describe 'Events', ->
       alice.put().then ->
         alice.del().then(->)
 
-  describe 'save event', ->
+  describe 'put event', ->
     it 'should fire', (done)->
-      Model.on 'save', (inst)->
+      Model.on 'put', (inst)->
         assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'save'
+        Model.removeAllListeners 'put'
         done()
       alice = Model.create name:'alice', age:21
       alice.put().then ->
         alice.del().then(->)
+
+  describe 'event emitter options', ->
+    it 'should send wildcard events with wildcard:true', (done)->
+      Loud = createModel
+        name: 'Loud'
+        connection: createClient()
+        events:
+          wildcard: true
+        schema:
+          properties:
+            name:
+              type: 'string'
+            age:
+              type: 'number'
+
+      Loud.on '*', (inst)->
+        done()
+      Loud.create name:'alice', age:32
+
+    it 'should emit newListener event with newListener:true', (done)->
+      Loud = createModel
+        name: 'Loud'
+        connection: createClient()
+        events:
+          newListener: true
+        schema:
+          properties:
+            name:
+              type: 'string'
+            age:
+              type: 'number'
+
+      Loud.on 'newListener', ->
+        done()
+      Loud.on 'create', (inst)->
+      Loud.create name:'alice', age:32

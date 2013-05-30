@@ -23,6 +23,9 @@ Book = createModel
         required: true
 
 bell = Book.create title: 'For Whom the Bell Tolls'
+bell.put (err)->
+  console.log 'saved'
+
 ```
 
 Plugins

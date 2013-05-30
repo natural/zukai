@@ -59,10 +59,9 @@ describe 'Methods', ->
 
       Fruit = createModel
         name: 'fruit'
-        methods:
-          del: (cb)->
-            # not promise based
-            cb arg1, arg2
+        del: (cb)->
+          # not promise based
+          cb arg1, arg2
 
       grapes = Fruit.create()
       grapes.del (a, b)->

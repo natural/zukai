@@ -1,7 +1,7 @@
 assert = require 'assert'
 {createClient} = require 'riakpbc'
-{createModel} = require '../src'
-{plugins} = require '../src/plugins'
+{createModel, plugins} = require '../src'
+
 
 Place = Author = Book = Cover = null
 connection = null
@@ -62,5 +62,6 @@ describe 'Default Plugins', ->
       faulkner.relate 'advanced-payment', Book.create 'pylon'
 
       faulkner.put().catch (err)->
+        assert err.message+'' == 'Error: Too many relations for Book:advanced-payment'
         faulkner.links.pop()
         faulkner.put().then faulkner.del done

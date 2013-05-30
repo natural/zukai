@@ -32,41 +32,41 @@ describe 'Hooks', ->
       assert Model.schema.properties.badge
       done()
 
-  describe 'plugin save events', ->
-    it 'pre-save should work', (done)->
+  describe 'plugin put events', ->
+    it 'pre-put should work', (done)->
       Model.plugin (model, options)->
-        model.pre 'save', (object, next)->
+        model.pre 'put', (object, next)->
           assert object.doc.name == 'carol'
           next()
           done()
-      m = Model.create 'pre-save', name:'carol', age:77
+      m = Model.create 'pre-put', name:'carol', age:77
       m.put().then ->
         m.del().then()
 
-    it 'pre-save should propagate errors', (done)->
+    it 'pre-put should propagate errors', (done)->
       Model.plugin (model, options)->
-        model.pre 'save', (object, next)->
+        model.pre 'put', (object, next)->
           next 'fail'
-      m = Model.create 'pre-save-error', name:'dave', age:88
+      m = Model.create 'pre-put-error', name:'dave', age:88
       m.put().catch (err)->
         assert err.message == 'fail'
         done()
 
-    it 'post-save should work', (done)->
+    it 'post-put should work', (done)->
       Model.plugin (model, options)->
-        model.post 'save', (object, next)->
+        model.post 'put', (object, next)->
           assert object.doc.name == 'ed'
           next()
           done()
-      m = Model.create 'post-save', name:'ed', age:99
+      m = Model.create 'post-put', name:'ed', age:99
       m.put().then ->
         m.del().then()
 
-    it 'post-save should propagate errors', (done)->
+    it 'post-put should propagate errors', (done)->
       Model.plugin (model, options)->
-        model.post 'save', (object, next)->
+        model.post 'put', (object, next)->
           next 'fail'
-      m = Model.create 'post-save-error', name:'frank', age:101
+      m = Model.create 'post-put-error', name:'frank', age:101
       m.put().catch (err)->
         assert err.message == 'fail'
         m.del().then done
