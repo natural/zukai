@@ -1,4 +1,4 @@
-{EventEmitter} = require 'events'
+{EventEmitter2} = require 'eventemitter2'
 {defaults, extend} = require 'underscore'
 {defer} = require 'q'
 
@@ -7,7 +7,7 @@ inflection = require 'inflection'
 jsonschema = require 'jsonschema'
 
 
-exports.createModel = (defn)->
+exports.createModel = (defn, options)->
   defn = defn or {}
   name = defn.name
 
@@ -16,8 +16,16 @@ exports.createModel = (defn)->
 
   bucket = defn.bucket
   bucket = inflection.pluralize name.toLowerCase() if not bucket
+  server = new EventEmitter2 options?.eventServer
 
-  options =
+  ProtoModel.registry[bucket] = extend server,
+    # extend the event emitter with the prototypical model
+    exports.ProtoModel,
+
+    # and any given methods.  is this needed still?
+    (defn.methods or {}),
+
+    # finally, layer on specific values
     name: name
     bucket: bucket
     connection: defn.connection or null
@@ -28,12 +36,6 @@ exports.createModel = (defn)->
     indexes: []
     schema: defn.schema or {}
 
-  derived = extend (new EventEmitter()),
-    exports.ProtoModel,
-    (defn.methods or {}),
-    options
-
-  ProtoModel.registry[bucket] = derived
 
 
 exports.ProtoModel = ProtoModel =
@@ -226,6 +228,7 @@ exports.ProtoModel = ProtoModel =
 
   plugin: (plugin, options)->
     plugin @, options
+    @
 
   pre: (kwd, callable)->
     if not @hooks.pre[kwd]?

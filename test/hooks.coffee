@@ -13,7 +13,7 @@ badgePlugin = (model, options)->
 
 
 
-describe 'Plugins', ->
+describe 'Hooks', ->
   beforeEach (done)->
     Model = createModel
       name: 'plugins-test'

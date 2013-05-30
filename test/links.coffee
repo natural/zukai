@@ -103,7 +103,7 @@ describe 'Links', ->
           tertiary.put().then (t)->
             assert t.key == tertiary.key
 
-            TertiaryModel.get('key-12', walk:tag).then (t)->
+            TertiaryModel.get('key-12', walk:'*').then (t)->
               assert t.length == 3
               tertiary.del().then ->
                 secondary.del().then ->
