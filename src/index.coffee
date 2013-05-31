@@ -1,10 +1,10 @@
-{defaults, each, extend, object, filter, map, some} = require 'underscore'
 {EventEmitter2} = require 'eventemitter2'
 {defer} = require 'q'
 async = require 'async'
 inflection = require 'inflection'
 jsonschema = require 'jsonschema'
-
+{defaults, each, every, extend, object, filter, map, some} =\
+  require 'underscore'
 
 exports.plugins = require('./plugins').plugins
 
@@ -336,6 +336,49 @@ exports.ProtoModel = ProtoModel =
           doc[name] = val
         if prop.properties
           @setDefaults prop, doc[name]
+
+
+  load: (tag, callback)->
+    if typeof tag == 'function'
+      callback = tag
+      tag = '*'
+
+    self = @
+    deferred = defer()
+    get = (v)-> [bucket:v.bucket, data:(Riak.mapValuesJson v)]
+
+    if tag == '*'
+      links = self.links
+    else
+      links = filter self.links, (lnk)->lnk.tag == tag
+
+    if not links.length
+      deferred.resolve []
+      return deferred.promise.nodeify callback
+
+    request =
+      inputs: ([lnk.bucket, lnk.key] for lnk in links)
+      query: [
+        {map: {language: 'javascript', source: get.toString()}}
+        ]
+    query =
+      request: JSON.stringify request
+      content_type: self.contentType
+
+    self.connection.mapred query, (docs)->
+      docs = docs or {}
+
+      objects = map docs[0], (doc)->
+        model = self.registry[doc.bucket]
+        if model
+          model.create doc.data
+
+      if every objects, ((v)-> not not v)
+        deferred.resolve objects
+      else
+        deferred.reject message: 'Unable to resolve one or more models'
+
+    return deferred.promise.nodeify callback
 
 
 # For reference, a reply object from riakpbc looks like this:
