@@ -1,10 +1,11 @@
-{EventEmitter2} = require 'eventemitter2'
-{defer} = require 'q'
 async = require 'async'
 inflection = require 'inflection'
 jsonschema = require 'jsonschema'
-{defaults, each, every, extend, object, filter, map, some} =\
-  require 'underscore'
+under = require 'underscore'
+
+{defer} = require 'q'
+{EventEmitter2} = require 'eventemitter2'
+
 
 exports.plugins = require('./plugins').plugins
 
@@ -26,17 +27,20 @@ exports.createModel = (name, defn)->
     hooks:
       pre:  {create:[], put:[], del:[]}
       post: {create:[], put:[], del:[]}
-    indexes: []
+    indexes: defn.indexes or []
     schema: defn.schema or {}
 
   server = new EventEmitter2 defn.events
   delete defn.events
 
-  ProtoModel.registry[defn.bucket] = extend server,
+  ProtoModel.registry[defn.bucket] = under.extend server,
     exports.ProtoModel, base, defn
 
 
 exports.ProtoModel = ProtoModel =
+  # These properties are totally replaced by createModel;
+  # however, puting them here allows for direct use of
+  # the model.  That's crazy, tho, so don't do it.
   name: 'ProtoModel'
   bucket: 'undefined'
   connection: null
@@ -47,7 +51,8 @@ exports.ProtoModel = ProtoModel =
   indexes: []
   schema: {}
 
-  # shared
+  # The registry is shared by reference and is not
+  # replaced by createModel.
   registry: {}
 
 
@@ -57,19 +62,19 @@ exports.ProtoModel = ProtoModel =
       key = doc.key or null
 
     self = @
-    inst = extend {}, self, key: key, doc: doc, links: [], reply: {}
+    inst = under.extend {}, self, key: key, doc: doc, links: [], reply: {}
     inst.setDefaults inst.schema, inst.doc
-    map inst.hooks.pre.create, (hook)-> hook inst
+    under.map inst.hooks.pre.create, (hook)-> hook inst
     validation = jsonschema.validate inst.doc, self.schema
 
     if validation?.errors?.length
-      inst.invalid = true
-      extend inst, invalid: validation, doc: {}
+      inst.invalid = validation
+      inst.doc = {}
     else
       inst.invalid = false
-      map inst.hooks.post.create, (hook)-> hook inst
+      under.map inst.hooks.post.create, (hook)-> hook inst
       self.emit 'create', inst
-      inst
+    inst
 
 
   get: (key, options, callback)->
@@ -93,24 +98,24 @@ exports.ProtoModel = ProtoModel =
       options = {}
 
     request = bucket: self.bucket, key: key
-    defaults request, options, self.defaultGetOptions
+    under.defaults request, options, self.defaultGetOptions
 
     self.connection.get request, (reply)->
       if reply?.errmsg
         deferred.reject message: reply.errmsg
       else if reply?.content
-        objects = map reply.content, (result)->
+        objects = under.map reply.content, (result)->
           if not options.head
             content = self.decode result.value
           else
             content = {}
           inst = self.create key, content
-          extend inst, links: result.links, reply: reply, key: key
+          under.extend inst, links: result.links, reply: reply, key: key
 
         objects = objects[0] if objects.length == 1
         if options.walk and objects.links?
-          objects.walk(options.walk).then (refs)->
-            deferred.resolve [objects].concat refs
+          objects.walk(options.walk).then (docs)->
+            deferred.resolve [objects].concat docs
         else
           deferred.resolve objects
       else
@@ -144,7 +149,7 @@ exports.ProtoModel = ProtoModel =
         deferred.reject message: err
       else
         request = bucket: self.bucket, key: self.key, vclock: self.vclock
-        defaults request, options, self.defaultDelOptions
+        under.defaults request, options, self.defaultDelOptions
 
         self.connection.del request, (reply)->
           if reply.errmsg
@@ -197,7 +202,7 @@ exports.ProtoModel = ProtoModel =
           indexes: self.indexes
           links: self.links
 
-      defaults request, options, self.defaultPutOptions
+      under.defaults request, options, self.defaultPutOptions
       request.key = self.key if self.key?
       request.vclock = self.reply.vclock if self.reply?.vclock?
 
@@ -210,7 +215,7 @@ exports.ProtoModel = ProtoModel =
 
         async.each (self.getHooks 'post', 'put'), run, (err, results)->
           if err
-            self.invalid = true
+            self.invalid = err
             deferred.reject message: err
           else
             self.invalid = false
@@ -220,35 +225,63 @@ exports.ProtoModel = ProtoModel =
     deferred.promise.nodeify callback
 
 
-  walk: (tag, callback)->
+  walk: (options, callback)->
+    tag = bucket = '*'
+    switch typeof options
+      when 'string'
+        tag = options
+      when 'object'
+        tag = options.tag if options.tag
+        bucket = options.bucket if options.bucket
+      when 'function'
+        callback = tag
+
     self = @
     deferred = defer()
+    get = (v)-> [bucket:v.bucket, data:(Riak.mapValuesJson v), key:v.key]
 
     if tag == '*'
       links = self.links
     else
-      links = filter self.links, (lnk)->lnk.tag == tag
+      links = under.filter self.links, (lnk)->lnk.tag == tag
+
+    if bucket and bucket != '*'
+      links = under.filter links, (lnk)->lnk.bucket == bucket
 
     if not links.length
       deferred.resolve []
-      return deferred.promise
+      return deferred.promise.nodeify callback
 
-    models = object ([mdl.bucket, mdl] for name, mdl of self.registry)
+    request =
+      inputs: ([lnk.bucket, lnk.key] for lnk in links)
+      query: [
+        {map: {language: 'javascript', source: get.toString()}}
+        ]
+    query =
+      request: JSON.stringify request
+      content_type: self.contentType
 
-    fetch = (link, cb)->
-      model = models[link.bucket]
-      if model
-        model.get(link.key).then (doc)->
-          cb null, doc # wrong
+    self.connection.mapred query, (docs)->
+      docs = docs or {}
+
+      objects = under.map docs[0], (doc)->
+        model = self.registry[doc.bucket]
+        if model
+          return model.create doc.key, doc.data
+
+      if under.every objects, ((v)-> not not v)
+        deferred.resolve objects
       else
-        cb message: "No model registered for #{link.bucket}"
+        deferred.reject message: 'Unable to resolve one or more models'
 
-    async.map links, fetch, (err, results)->
-      if err
-        deferred.reject err
-      else
-        deferred.resolve results
-    return deferred.promise
+    return deferred.promise.nodeify callback
+
+
+  relate: (tag, obj, dupes=false)->
+    match = (lnk)->
+      lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
+    if dupes or not under.some @links, match
+      @links.push tag: tag, key: obj.key, bucket: obj.bucket
 
 
   toJSON: ->
@@ -278,13 +311,6 @@ exports.ProtoModel = ProtoModel =
     if not @hooks.post[kwd]
       throw new Error "Model does not support post #{kwd}"
     @hooks.post[kwd].push callable
-
-
-  relate: (tag, obj, dupes=false)->
-    match = (lnk)->
-      lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
-    if dupes or not some @links, match
-      @links.push tag: tag, key: obj.key, bucket: obj.bucket
 
 
   defaultPutOptions:
@@ -327,7 +353,7 @@ exports.ProtoModel = ProtoModel =
 
 
   setDefaults: (schema, doc)->
-    each schema.properties, (prop, name)->
+    under.each schema.properties, (prop, name)->
       if not doc[name]?
         val = prop.default
         if typeof val == 'function'
@@ -336,49 +362,6 @@ exports.ProtoModel = ProtoModel =
           doc[name] = val
         if prop.properties
           @setDefaults prop, doc[name]
-
-
-  load: (tag, callback)->
-    if typeof tag == 'function'
-      callback = tag
-      tag = '*'
-
-    self = @
-    deferred = defer()
-    get = (v)-> [bucket:v.bucket, data:(Riak.mapValuesJson v)]
-
-    if tag == '*'
-      links = self.links
-    else
-      links = filter self.links, (lnk)->lnk.tag == tag
-
-    if not links.length
-      deferred.resolve []
-      return deferred.promise.nodeify callback
-
-    request =
-      inputs: ([lnk.bucket, lnk.key] for lnk in links)
-      query: [
-        {map: {language: 'javascript', source: get.toString()}}
-        ]
-    query =
-      request: JSON.stringify request
-      content_type: self.contentType
-
-    self.connection.mapred query, (docs)->
-      docs = docs or {}
-
-      objects = map docs[0], (doc)->
-        model = self.registry[doc.bucket]
-        if model
-          model.create doc.data
-
-      if every objects, ((v)-> not not v)
-        deferred.resolve objects
-      else
-        deferred.reject message: 'Unable to resolve one or more models'
-
-    return deferred.promise.nodeify callback
 
 
 # For reference, a reply object from riakpbc looks like this:

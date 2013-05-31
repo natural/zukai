@@ -133,7 +133,7 @@ describe 'Links', ->
                   primary.del().then done
 
 
-    it 'should support walking via .load', (done)->
+    it 'should support walking via .walk', (done)->
       tag = 'multi-type'
 
       primary = PrimaryModel.create 'key-10', a:1, b:2
@@ -151,10 +151,40 @@ describe 'Links', ->
           tertiary.put().then (t)->
             assert t.key == tertiary.key
 
-            t.load '*', (err, docs)->
+            t.walk '*', (err, docs)->
               assert not err
               assert docs.length == 2
 
               tertiary.del().then ->
                 secondary.del().then ->
                   primary.del().then done
+
+    it 'should support walking via .walk with options', (done)->
+      tag = 'multi-bucket-and-tag-type'
+
+      primary = PrimaryModel.create 'key-10', a:1, b:2
+      primary.put().then (p)->
+        assert p.key == primary.key
+
+        secondary = SecondaryModel.create 'key-11', c:3, d:4
+        secondary.put().then (q)->
+          assert q.key == secondary.key
+
+          tertiary = TertiaryModel.create 'key-12', e:5, f:6
+          tertiary.relate tag, primary
+          tertiary.relate tag, secondary
+
+          tertiary.put().then (t)->
+            assert t.key == tertiary.key
+
+            t.walk tag:tag, (err, docs)->
+              assert not err
+              assert docs.length == 2
+
+              t.walk bucket:primary.bucket, (err, docs)->
+                assert not err
+                assert docs.length == 1
+
+                tertiary.del().then ->
+                  secondary.del().then ->
+                    primary.del().then done
