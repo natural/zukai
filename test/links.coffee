@@ -25,6 +25,29 @@ describe 'Links', ->
 
     done()
 
+
+  describe 'relate method', ->
+    it 'should not allow duplicate links if dupes=false', (done)->
+      tag = 'it'
+      p = PrimaryModel.create 'key-0', a:0, b:-1
+      assert p.key
+      s = SecondaryModel.create 'key-00'
+      assert p.relate tag, s
+      assert not p.relate tag, s
+      assert p.links.length == 1
+      done()
+
+    it 'should allow duplicate links if dupes=true', (done)->
+      tag = 'it'
+      p = PrimaryModel.create 'key-0', a:0, b:-1
+      assert p.key
+      s = SecondaryModel.create 'key-00'
+      assert p.relate tag, s, true
+      assert p.relate tag, s, true
+      assert p.links.length == 2
+      done()
+
+
   describe 'objects with links', ->
     it 'should save and resolve one link', (done)->
       tag = 'relation-type'

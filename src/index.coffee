@@ -1,5 +1,5 @@
+{defaults, each, extend, object, filter, map, some} = require 'underscore'
 {EventEmitter2} = require 'eventemitter2'
-{defaults, each, extend} = require 'underscore'
 {defer} = require 'q'
 async = require 'async'
 inflection = require 'inflection'
@@ -47,31 +47,29 @@ exports.ProtoModel = ProtoModel =
   indexes: []
   schema: {}
 
-  # shared:
+  # shared
   registry: {}
 
 
   create: (key, doc)->
-    self = @
     if typeof key == 'object'
       doc = key
       key = doc.key or null
 
+    self = @
     inst = extend {}, self, key: key, doc: doc, links: [], reply: {}
     inst.setDefaults inst.schema, inst.doc
+    map inst.hooks.pre.create, (hook)-> hook inst
+    validation = jsonschema.validate inst.doc, self.schema
 
-    for hook in inst.hooks.pre.create
-      hook inst
-
-    res = jsonschema.validate inst.doc, self.schema
-    if res.errors and res.errors.length
-      extend inst, invalid: res, doc: {}
+    if validation?.errors?.length
+      inst.invalid = true
+      extend inst, invalid: validation, doc: {}
     else
       inst.invalid = false
-      for hook in inst.hooks.post.create
-        hook inst
+      map inst.hooks.post.create, (hook)-> hook inst
       self.emit 'create', inst
-    inst
+      inst
 
 
   get: (key, options, callback)->
@@ -81,6 +79,7 @@ exports.ProtoModel = ProtoModel =
     if typeof options == 'function'
       callback = options
       options = {}
+
     self = @
     deferred = defer()
 
@@ -97,16 +96,17 @@ exports.ProtoModel = ProtoModel =
     defaults request, options, self.defaultGetOptions
 
     self.connection.get request, (reply)->
-      if reply and reply.errmsg
+      if reply?.errmsg
         deferred.reject message: reply.errmsg
-      else if reply and reply.content
-        objects = for result in reply.content
+      else if reply?.content
+        objects = map reply.content, (result)->
           if not options.head
             content = self.decode result.value
           else
             content = {}
           inst = self.create key, content
           extend inst, links: result.links, reply: reply, key: key
+
         objects = objects[0] if objects.length == 1
         if options.walk and objects.links?
           objects.walk(options.walk).then (refs)->
@@ -153,10 +153,10 @@ exports.ProtoModel = ProtoModel =
             self.deleted = true
             self.reply = reply
             async.each (self.getHooks 'post', 'del'), run, (err)->
-              self.emit 'delete', self
               if err
                 deferred.reject message: err
               else
+                self.emit 'delete', self
                 deferred.resolve null
     deferred.promise.nodeify callback
 
@@ -174,10 +174,10 @@ exports.ProtoModel = ProtoModel =
     else if not options
       options = {}
 
-    res = jsonschema.validate self.doc, self.schema
+    validation = jsonschema.validate self.doc, self.schema
 
-    if res.errors and res.errors.length
-      self.invalid = res
+    if validation?.errors?.length
+      self.invalid = validation
       deferred.reject message: 'Invalid'
       return deferred.promise.nodeify callback
 
@@ -199,7 +199,7 @@ exports.ProtoModel = ProtoModel =
 
       defaults request, options, self.defaultPutOptions
       request.key = self.key if self.key?
-      request.vclock = self.reply?.vclock if self.reply?.vclock?
+      request.vclock = self.reply.vclock if self.reply?.vclock?
 
       self.connection.put request, (reply)->
         if reply.errmsg
@@ -223,17 +223,17 @@ exports.ProtoModel = ProtoModel =
   walk: (tag, callback)->
     self = @
     deferred = defer()
+
     if tag == '*'
       links = self.links
     else
-      links = (link for link in self.links when link.tag==tag)
+      links = filter self.links, (lnk)->lnk.tag == tag
+
     if not links.length
-      deferred.resolve()
+      deferred.resolve []
       return deferred.promise
 
-    models = {}
-    for name, model of self.registry
-      models[model.bucket] = model
+    models = object ([mdl.bucket, mdl] for name, mdl of self.registry)
 
     fetch = (link, cb)->
       model = models[link.bucket]
@@ -269,28 +269,22 @@ exports.ProtoModel = ProtoModel =
 
 
   pre: (kwd, callable)->
-    if not @hooks.pre[kwd]?
+    if not @hooks.pre[kwd]
       throw new Error "Model does not support pre #{kwd}"
     @hooks.pre[kwd].push callable
 
 
   post: (kwd, callable)->
-    if not @hooks.post[kwd]?
+    if not @hooks.post[kwd]
       throw new Error "Model does not support post #{kwd}"
     @hooks.post[kwd].push callable
 
 
   relate: (tag, obj, dupes=false)->
-    relation = tag: tag, key: obj.key, bucket: obj.bucket
-    insert = true
-
-    if not dupes
-      for item in @links when item.tag==tag
-        if item.key == obj.key and item.bucket==obj.bucket
-          insert = false
-
-    if insert
-      @links.push relation
+    match = (lnk)->
+      lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
+    if dupes or not some @links, match
+      @links.push tag: tag, key: obj.key, bucket: obj.bucket
 
 
   defaultPutOptions:
