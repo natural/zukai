@@ -7,8 +7,8 @@ Riak ODM for Node.js.
 #### Features
 
   * Uses PBC interface to Riak via [RiakPBC](https://github.com/nlf/riakpbc)
-  * Uses [jsonschema](https://github.com/tdegrunt/jsonschema) for schema definitions and [validation](http://json-schema.org/latest/json-schema-validation.html).
-  * Uses [Q](https://github.com/kriskowal/q) for dual-style Promise and Node.js APIs
+  * Uses [jsonschema](https://github.com/tdegrunt/jsonschema) for schema definitions and [validation](http://json-schema.org/latest/json-schema-validation.html)
+  * Uses [Q](https://github.com/kriskowal/q) for both Promise and conventional Node.js APIs
 
 
 #### Contents
@@ -17,18 +17,21 @@ Riak ODM for Node.js.
   * [Plugins](#plugins)
   * [Hooks](#hooks)
   * [Events](#events)
-  * [Copyright and License](#copyright)
   * [About](#about)
+  * [Copyright and License](#copyright)
 
 
-#### <a id="example"></a> Example
+<a id="example"></a>
+#### Example
 
 ```coffee
+{createClient} = require 'riakpbc'
 {createModel} = require 'zukai'
 
 Book = createModel
   name: 'Book'
   bucket: 'books'
+  connection: createClient()
   schema:
     properties:
       title:
@@ -41,11 +44,12 @@ bell.put (err)->
 ```
 
 
-#### <a id="plugins"></a> Plugins
+<a id="plugins"></a>
+#### Plugins
 
 Plugins are reusable components for Models.  Plugins
 typically modify the Model schema, install [hooks](#hooks), or both.  This
-example adds a new property named `author` to the schema:
+example adds a new property named `author`:
 
 ```coffee
 authorPlugin = (model, options)->
@@ -57,7 +61,8 @@ Books.plugin authorPlugin
 ```
 
 
-#### <a id="hooks"></a> Hooks
+<a id="hooks"></a>
+#### Hooks
 
 Hooks are functions that are called at various points in the life cycle of
 objects.
@@ -73,10 +78,8 @@ an error by supplying a value, e.g., `next(my_error)`.
 
 `model.pre('create', callback)`
 
-Pre-create hooks are run after a new object is created and default properties
-are set, but before the object document is validated.
-
-Example:
+Pre-create hooks run after a new object is created and default properties are
+set, but before the object document is validated.  Example:
 
 ```coffee
 Book.pre 'create', (object)->
@@ -87,34 +90,31 @@ Book.pre 'create', (object)->
 
 `model.post('create', callback)`
 
-Post-create hooks are run after the object document is validated but before the
+Post-create hooks run after the object document is validated but before the
 object is returned from the `create` function.
 
 ###### Pre-delete
 
 `model.pre('del', callback)`
 
-Pre-delete hooks are run before the object is removed from the bucket.  If a
-hook indicates an error (by calling `next()` with a value), the object will not
-be removed and the promise will be rejected.
+Pre-delete hooks run before the object is removed from the bucket.  If a hook
+indicates an error (by calling `next()` with a value), the object will not be
+removed and the promise will be rejected.
 
 ###### Post-delete
 
 `model.post('del', callback)`
 
-Post-delete hooks are run after the object is successfully removed from the
-bucket, but before the `del` event is emitted and before the promise is
-resolved.  Any error produced by a post-delete hook will cause the promise
-to be rejected.
+Post-delete hooks run after the object is successfully removed from the bucket,
+but before the `del` event is emitted and before the promise is resolved.  Any
+error produced by a post-delete hook will cause the promise to be rejected.
 
 ###### Pre-put
 
 `model.pre('put', callback)`
 
-Pre-put hooks are run before the object is put to the bucket.  If the hook
-indicates an error, the object will not be saved.
-
-Example:
+Pre-put hooks run before the object is put to the bucket.  If the hook indicates
+an error, the object will not be saved.  Example:
 
 ```coffee
 Book.pre 'put', (object, next)->
@@ -126,13 +126,13 @@ Book.pre 'put', (object, next)->
 
 `model.post('save', callback)`
 
-Post-put hooks are run after the object is successfully saved to the
-bucket, but before the `put` event is emitted and before the promise is
-resolved.  Any error produced by a post-put hook will cause the promise
-to be rejected.
+Post-put hooks run after the object is successfully saved to the bucket, but
+before the `put` event is emitted and before the promise is resolved.  Any error
+produced by a post-put hook will cause the promise to be rejected.
 
 
-#### <a id="events"></a> Events
+<a id="events"></a>
+#### Events
 
 Models emit events (using
 [EventEmitter2](https://github.com/hij1nx/EventEmitter2)).  The value passed to
@@ -166,16 +166,16 @@ The `put` event is emitted after the object is put to the bucket and after all
 post-save hooks have run.
 
 
-#### <a id="API"></a> API
-
+<a id="API"></a>
+#### API
 
 ###### `zukai.createModel([name], definition)`
 
-Factory function that creates a model.
+Factory function that creates a new Model.
 
   * `name` optional string, the name of the model.
 
-The config `definition` object should have keys thusly:
+The `definition` object should have keys thusly:
 
   * `name`, required string (if first parameter is missing), the name of the model
   * `bucket`, optional, the name of the Riak bucket from which to read and write
@@ -186,7 +186,6 @@ The config `definition` object should have keys thusly:
   * `methods`, optional, an object of functions to add to the Model
   * `indexes`, optional, a function that returns an array of indexes included in
   the `put()` call.
-
 
 
 ###### `zukai.ProtoModel`
@@ -284,13 +283,15 @@ function, it's called without arguments and it's result is used as the default
 value.
 
 
+<a id="about"></a>
 #### About
 
 [As far as I can tell](http://translate.google.com/#ja/en/%E5%9B%B3%E8%A7%A3),
 "zukai" (図解) is a Japanese word for "schematic".
 
 
-#### <a id="copyright"></a> Copyright and License
+<a id="copyright"></a>
+#### Copyright and License
 
 Copyright 2013, Troy Melhase.
 
