@@ -32,6 +32,11 @@ exports.createModel = (name, defn)->
   server = new EventEmitter2 defn.events
   delete defn.events
 
+  # hm...
+  #if defn.connection
+  #  defn.connection.client.setNoDelay()
+  #  defn.connection.client.setKeepAlive()
+
   ProtoModel.registry[defn.bucket] = under.extend server,
     exports.ProtoModel, base, defn
 

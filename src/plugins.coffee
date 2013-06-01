@@ -4,27 +4,30 @@
 exports.plugins =
 
   relation: (model, options)->
-    options = defaults options, minimum: 0, maximum: options.minimum
-    min = options.minimum
-    max = options.maximum
+    options = defaults options, minItems: 0, maxItems: options.minItems
+    minItems = options.minItems
+    maxItems = options.maxItems
     tag = options.tag
-    rel = options.model
+    type = options.type
 
-    if min > max
-      throw new Error 'Minimum cannot be greater than maximum'
+    if not type
+      throw new Error 'Missing type'
+
+    if minItems > maxItems
+      throw new Error 'minItems cannot be greater than maxItems'
 
     model.pre 'put', (object, next)->
-      buckets = (b for b, m of model.registry when m.name==rel)
+      buckets = (b for b, m of model.registry when m.name==type)
 
       if not buckets.length
-        next new Error "No model #{rel}"
+        return next new Error "No model #{type}"
 
       bucket = buckets[0]
       links = (k for k in object.links when k.bucket==bucket and k.tag==tag)
 
-      if min and links.length < min
-        next new Error "Too few relations for #{rel}:#{tag}"
-      else if max and links.length > max
-        next new Error "Too many relations for #{rel}:#{tag}"
+      if minItems and links.length < minItems
+        next new Error "Too few relations for #{type}:#{tag}"
+      else if maxItems and links.length > maxItems
+        next new Error "Too many relations for #{type}:#{tag}"
       else
         next()

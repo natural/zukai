@@ -27,20 +27,20 @@ describe 'Default Plugins', ->
     done()
 
   describe 'relation', ->
-    it 'should allow missing relationship when minimum=0', (done)->
+    it 'should allow missing relationship when minItems=0', (done)->
       Author.plugin plugins.relation,
-        model: 'Place'
+        type: 'Place'
         tag: 'birth-place'
-        minimum: 0
+        minItems: 0
 
       fitzgerald = Author.create 'f-scott', born:1896
       fitzgerald.put().then fitzgerald.del done
 
-    it 'should not allow missing relationship when minimum=1', (done)->
+    it 'should not allow missing relationship when minItems=1', (done)->
       Author.plugin plugins.relation,
-        model: 'Place'
+        type: 'Place'
         tag: 'birth-place'
-        minimum: 1
+        minItems: 1
 
       oakpark = Place.create 'oak-park'
       hemingway = Author.create 'ernest', born:1899
@@ -50,11 +50,11 @@ describe 'Default Plugins', ->
         hemingway.put().then hemingway.del done
 
 
-    it 'should not allow more than given maximum relationships', (done)->
+    it 'should not allow more than given maxItems relationships', (done)->
       Author.plugin plugins.relation,
-        model: 'Book'
+        type: 'Book'
         tag: 'advanced-payment'
-        maximum: 2
+        maxItems: 2
 
       faulkner = Author.create 'will', born:1897
       faulkner.relate 'advanced-payment', Book.create 'mosquitoes'
@@ -65,3 +65,22 @@ describe 'Default Plugins', ->
         assert err.message+'' == 'Error: Too many relations for Book:advanced-payment'
         faulkner.links.pop()
         faulkner.put().then faulkner.del done
+
+    it 'should not allow relations to missing models', (done)->
+      Author.plugin plugins.relation,
+        type: 'Rocket'
+        tag: 'ship'
+
+      a = Author.create 'heinlein'
+      a.relate 'ship', {}
+      a.put().catch (err)->
+        assert "#{err.message}" == 'Error: No model Rocket'
+        done()
+
+
+    it 'should not allow relations to undefined models', (done)->
+      try
+        Author.plugin plugins.relation, tag:'nope'
+      catch err
+        assert "#{err.message}" == 'Missing type'
+      done()
