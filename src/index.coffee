@@ -2,8 +2,8 @@ async = require 'async'
 inflection = require 'inflection'
 jsonschema = require 'jsonschema'
 under = require 'underscore'
+q = require 'q'
 
-{defer} = require 'q'
 {EventEmitter2} = require 'eventemitter2'
 
 
@@ -27,7 +27,6 @@ exports.createModel = (name, defn)->
     hooks:
       pre:  {create:[], put:[], del:[]}
       post: {create:[], put:[], del:[]}
-    indexes: defn.indexes or []
     schema: defn.schema or {}
 
   server = new EventEmitter2 defn.events
@@ -48,13 +47,13 @@ exports.ProtoModel = ProtoModel =
   hooks:
     pre:  {create:[], put:[], del:[]}
     post: {create:[], put:[], del:[]}
-  indexes: []
   schema: {}
 
   # The registry is shared by reference and is not
   # replaced by createModel.
   registry: {}
 
+  indexes: ->
 
   create: (key, doc)->
     if typeof key == 'object'
@@ -86,7 +85,7 @@ exports.ProtoModel = ProtoModel =
       options = {}
 
     self = @
-    deferred = defer()
+    deferred = q.defer()
 
     if not self.connection
       deferred.reject message: 'Not connected'
@@ -125,7 +124,7 @@ exports.ProtoModel = ProtoModel =
 
   del: (options, callback)->
     self = @
-    deferred = defer()
+    deferred = q.defer()
 
     if not self.connection
       deferred.reject message: 'Not connected'
@@ -168,7 +167,7 @@ exports.ProtoModel = ProtoModel =
 
   put: (options, callback)->
     self = @
-    deferred = defer()
+    deferred = q.defer()
 
     if not self.connection
       deferred.reject message: 'Not connected'
@@ -199,7 +198,7 @@ exports.ProtoModel = ProtoModel =
         content:
           value: self.encode self.doc
           content_type: self.contentType
-          indexes: self.indexes
+          indexes: self.indexes() or []
           links: self.links
 
       under.defaults request, options, self.defaultPutOptions
@@ -237,7 +236,7 @@ exports.ProtoModel = ProtoModel =
         callback = tag
 
     self = @
-    deferred = defer()
+    deferred = q.defer()
     get = (v)-> [bucket:v.bucket, data:(Riak.mapValuesJson v), key:v.key]
 
     if tag == '*'
@@ -362,6 +361,23 @@ exports.ProtoModel = ProtoModel =
           doc[name] = val
         if prop.properties
           @setDefaults prop, doc[name]
+
+
+  indexSearch: (query, callback)->
+    self = @
+    deferred = q.defer()
+
+    under.defaults query,
+      bucket: self.bucket
+      qtype: 0
+
+    self.connection.getIndex query, (reply)->
+      if reply?.keys?
+        deferred.resolve reply.keys
+      else
+        deferred.reject null
+
+    return deferred.promise.nodeify callback
 
 
 # For reference, a reply object from riakpbc looks like this:
