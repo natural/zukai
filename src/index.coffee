@@ -165,7 +165,7 @@ exports.ProtoModel = ProtoModel =
               if err
                 deferred.reject message: err
               else
-                self.emit 'delete', self
+                self.emit 'del', self
                 deferred.resolve null
     deferred.promise.nodeify callback
 

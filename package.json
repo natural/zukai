@@ -1,7 +1,7 @@
 {
   "name": "zukai",
-  "version": "0.0.7",
-  "description": "Riak ODM for Node.js",
+  "version": "0.1.0",
+  "description": "Riak ODM",
   "homepage": "https://github.com/natural/zukai",
   "main": "lib/index.js",
   "scripts": {

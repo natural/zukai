@@ -7,7 +7,7 @@ Model = null
 
 
 describe 'Events', ->
-  before (done)->
+  beforeEach (done)->
     Model = createModel
       name: 'eventcheck'
       connection: createClient()
@@ -30,7 +30,7 @@ describe 'Events', ->
 
   describe 'delete event', ->
     it 'should fire', (done)->
-      Model.on 'delete', (inst)->
+      Model.on 'del', (inst)->
         assert inst.doc.name == 'alice'
         Model.removeAllListeners 'delete'
         done()
