@@ -17,8 +17,10 @@ Riak ODM for Node.js.
   * [Plugins](#plugins)
   * [Hooks](#hooks)
   * [Events](#events)
+  * [API](#api)
+  * [Changelog](#changelog)
   * [About](#about)
-  * [Copyright and License](#copyright)
+  * [License](#license)
 
 
 <a id="example"></a>
@@ -194,45 +196,84 @@ Prototypical model used to create other models via the `createModel` function
 described above.  You can change any property or function on this object to
 effect all models created (but you shouldn't really have to, either).
 
+
 ###### `Model.create([key], [values])`
 
-Static method that creates an object of the given Model.  Returns a new model
-object.
+Static method that creates and returns an object of the given Model.
 
   * `key`, optional string, if given will be the key for the object
   within the bucket
-  * `values`, optional object, properties to set on the model object
+  * `values`, optional hash, properties to set on the model object
+
 
 ###### `Model.get([key], [options], [callback])`
 
-Static method to read the value at the given key from the model's bucket.
+Static method that reads the value at the given key from the model's bucket.
+Returns a promise.
 
   * `key`, required string if not present in `options`, string, the key to read
   * `options`, optional hash, passed to the connection `get` call
   * `callback`, optional function, called with `(error, object)` after read
   is complete.
-  * returns a promise
 
-###### `object.put([callback])`
 
-Save the model object.
+###### `object.put([options], [callback])`
 
-  * `callback`, required function, called with `(error)` after save
+Static method to save the object document to the model's bucket.  Returns a
+promise.
+
+  * `options`, optional hash, passed to the connection `put` call
+  * `callback`, optional function, called with `(error)` after save
   is complete.
-  * returns a promise
+
 
 ###### `object.del([options], [callback])`
 
-Delete the model object.
+Delete the model object from the model's bucket.  Returns a promise.
 
   * `options`, optional hash, passed to the connection `del` call
   * `callback`, optional function, called with `(error)` after delete is
     complete.
-  * returns a promise
+
+
+
+###### `object.relate(tag, target, [dupes=false])`
+
+Associates the object with the target using the given tag using links.  Pass in
+a truthy value as the third argument to allow multiple links for the same
+key/bucket/tag triple.
+
+  * `tag` required string, the name to use for the relationship
+  * `target` required model object, the object to relate to this one
+
+
+###### `object.walk([options], [callback])`
+
+Retrieves the model objects(s) associated with this one.  Returns a promise that
+resolves to the related objects, or null if no related objects exist.
+
+  * `options`, optional hash, supply a `tag` key with the named relation, or
+    `'*'` to retrieve all related objects
+  * `callback`, optional function, called with `(err, documents)` when the walk
+    is complete
+
+The walk function makes a map reduce request that fetches the related documents
+with one request.
+
+
+###### `object.indexSearch(query, [callback])`
+
+Makes an index search request, using the index and parameters in the `query`
+hash.  The callback is run with `(err, keys)` when complete.  Returns a promise.q
+
+  * `query`, required hash, supply `qtype` and other query parameters
+  * `callback`, optional function, called when complete
+
 
 ###### `object.doc`
 
-The value of the key.
+The current model object's document.  This is the value read and written to the
+model's bucket.
 
 ###### `object.invalid`
 
@@ -245,30 +286,72 @@ validation, otherwise it will be `false`.
 The last reply from the client connection.  This value is used internally the various
 model object functions (for the vector clock, etc).
 
+
+###### `object.pre(keyword, callable)`
+
+Installs a hook to run before the given keyword.
+
+  * `keyword` required string, one of `create`, `put`, `del`
+  * `callable` required function, the hook function to run
+
+
+###### `object.post(keyword, callable)`
+
+Installs a hook to run after the given keyword.
+
+  * `keyword` required string, one of `create`, `put`, `del`
+  * `callable` required function, the hook function to run
+
 ###### `object.toJSON()`
 
 Returns an object suitable for serialization.  Unless replaced, this function
 returns the `object.doc` value.
+
 
 ###### `object.plugin(factory, options)`
 
 Runs the plugin factory, passing the Model and options objects to it.  See the
 Plugins section above.
 
-###### `object.relate(tag, target, [dupes=false])`
 
-Associates the object with the target using the given tag using links.  Pass in
-a truthy value as the third argument to allow multiple links for the same
-key/bucket/tag triple.
+###### `object.decode(string)`
 
-###### `object.walk(options, [callback])`
+Decodes the given string into a document.  The default implementation is
+`JSON.parse`.  Replace `encode` and `decode` methods if you need to use
+documents that are not JSON.
 
-Retrieves the model objects(s) associated with this one.
+
+###### `object.encode(value)`
+
+Encodes the given value into a string.  The default implementation is
+`JSON.stringify`.
+
+
+###### `Model.defaultPutOptions`
+
+Hash with the default values used when calling the connection `put` method.  The
+keys and values in the hash mirror the defaults in the [PBC Store Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Store-Object/)
+documentation.
+
+
+###### `Model.defaultGetOptions`
+
+Hash with the default values used when calling the connection `get` method.  The
+keys and values in the hash mirror the defaults in the [PBC Fetch Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Fetch-Object/)
+documentation.
+
+
+###### `Model.defaultDelOptions`
+
+Hash with the default values used when calling the connection `del` method.  The
+keys and values in the hash mirror the defaults in the [PBC Delete Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Delete-Object/)
+documentation.
+
 
 ###### `Model.registry` and `object.registry`
 
 Hash with all models created by the library.  Super nice for looking up models
-by name at runtime.  Used internally by the `resolve` function to instantiate
+by name at runtime.  Used internally by the `walk` function to instantiate
 related values into model objects.
 
 
@@ -283,15 +366,18 @@ function, it's called without arguments and it's result is used as the default
 value.
 
 
-<a id="about"></a>
+#### Changelog
+
+ * 01 June 2013 - release 0.1.0
+
+
 #### About
 
 [As far as I can tell](http://translate.google.com/#ja/en/%E5%9B%B3%E8%A7%A3),
 "zukai" (図解) is a Japanese word for "schematic".
 
 
-<a id="copyright"></a>
-#### Copyright and License
+#### License
 
 Copyright 2013, Troy Melhase.
 
