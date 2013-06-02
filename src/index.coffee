@@ -212,7 +212,7 @@ exports.ProtoModel = ProtoModel =
 
       self.connection.put request, (reply)->
         if reply.errmsg
-          return deferred.reject message: errmsg
+          return deferred.reject message: reply.errmsg
 
         self.key = reply.key if reply.key
         self.reply = reply
