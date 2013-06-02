@@ -65,6 +65,8 @@ exports.ProtoModel = ProtoModel =
       doc = key
       key = doc.key or null
       delete doc.key
+    else if not key and not doc
+      doc = {}
 
     self = @
     inst = under.extend {}, self, key: key, doc: doc, links: [], reply: {}
