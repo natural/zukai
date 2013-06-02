@@ -64,6 +64,7 @@ exports.ProtoModel = ProtoModel =
     if typeof key == 'object'
       doc = key
       key = doc.key or null
+      delete doc.key
 
     self = @
     inst = under.extend {}, self, key: key, doc: doc, links: [], reply: {}
