@@ -138,14 +138,15 @@ exports.ProtoModel = ProtoModel =
       deferred.reject message: 'Not connected'
       return deferred.promise.nodeify callback
 
-    if not self.key
-      deferred.reject message: 'No key'
-      return deferred.promise.nodeify callback
-
     if typeof options == 'function'
       callback = options
     else if not options
       options = {}
+
+    key = self.key or options.key
+    if not key
+      deferred.reject message: 'No key'
+      return deferred.promise.nodeify callback
 
     run = (hook, cb)->
       hook self, (err)->
@@ -155,7 +156,7 @@ exports.ProtoModel = ProtoModel =
       if err
         deferred.reject message: err
       else
-        request = bucket: self.bucket, key: self.key, vclock: self.vclock
+        request = bucket: self.bucket, key: key, vclock: self.vclock
         under.defaults request, options, self.defaultDelOptions
 
         self.connection.del request, (reply)->
