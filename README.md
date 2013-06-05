@@ -6,9 +6,9 @@ Riak ODM for Node.js.
 
 #### Features
 
-  * Uses PBC interface to Riak via [RiakPBC](https://github.com/nlf/riakpbc)
+  * Uses the Riak PBC interface via [RiakPBC](https://github.com/nlf/riakpbc)
   * Uses [jsonschema](https://github.com/tdegrunt/jsonschema) for schema definitions and [validation](http://json-schema.org/latest/json-schema-validation.html)
-  * Uses [Q](https://github.com/kriskowal/q) for both Promise and conventional Node.js APIs
+  * Uses [Q](https://github.com/kriskowal/q) for both Promise and conventional Node.js callbacks
 
 
 #### Contents
@@ -69,11 +69,11 @@ Books.plugin authorPlugin
 Hooks are functions that are called at various points in the life cycle of
 objects.
 
-Pre- and post-create hooks are called synchronously and are passed only one value,
-the object.  All other hooks are called asynchronously and are passed two values, the
-object and the continuation callback.  Asynchronous
-hooks must call `next()` to continue processing the operation, and may indicate
-an error by supplying a value, e.g., `next(my_error)`.
+Pre- and post-create hooks are called synchronously and are passed only one
+value, the object.  All other hooks are called asynchronously and are passed two
+values, the object and the continuation callback.  Asynchronous hooks must call
+the continuation callback (i.e., `next()`) to continue processing the operation,
+and may indicate an error by supplying a value, e.g., `next(my_error)`.
 
 
 ###### Pre-create
@@ -136,8 +136,8 @@ produced by a post-put hook will cause the promise to be rejected.
 <a id="events"></a>
 #### Events
 
-Models emit events (using
-[EventEmitter2](https://github.com/hij1nx/EventEmitter2)).  The value passed to
+Models emit events using
+[EventEmitter2](https://github.com/hij1nx/EventEmitter2).  The value passed to
 each event is the model object.
 
 Options for the event emitter are passed in via `options.events` to the
@@ -229,7 +229,7 @@ promise.
 
 ###### `object.del([options], [callback])`
 
-Delete the model object from the model's bucket.  Returns a promise.
+Deletes the model object from the model's bucket.  Returns a promise.
 
   * `options`, optional hash, passed to the connection `del` call
   * `callback`, optional function, called with `(error)` after delete is
@@ -245,6 +245,9 @@ key/bucket/tag triple.
 
   * `tag` required string, the name to use for the relationship
   * `target` required model object, the object to relate to this one
+
+Note that the object is not put to it's bucket after relating it to another
+object, you have to do that manually.
 
 
 ###### `object.walk([options], [callback])`
@@ -264,7 +267,7 @@ with one request.
 ###### `object.indexSearch(query, [callback])`
 
 Makes an index search request, using the index and parameters in the `query`
-hash.  The callback is run with `(err, keys)` when complete.  Returns a promise.q
+hash.  The callback is run with `(err, keys)` when complete.  Returns a promise.
 
   * `query`, required hash, supply `qtype` and other query parameters
   * `callback`, optional function, called when complete
@@ -311,7 +314,7 @@ returns the `object.doc` value.
 ###### `object.plugin(factory, options)`
 
 Runs the plugin factory, passing the Model and options objects to it.  See the
-Plugins section above.
+[Plugins](#plugins) section above.
 
 
 ###### `object.decode(string)`
@@ -362,13 +365,18 @@ Called to update `doc` with default values.
 ###### `object.getDefault(property)`
 
 Called to get the default value from the schema property.  If the value is a
-function, it's called without arguments and it's result is used as the default
+function, it's called without arguments and its result is used as the default
 value.
 
 
 #### Changelog
 
- * 01 June 2013 - release 0.1.0
+###### 05 June 2013 - release 0.1.1
+ * minor bugfixes
+ * more tests
+
+###### 01 June 2013 - release 0.1.0
+  * intial release
 
 
 #### About

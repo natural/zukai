@@ -82,10 +82,11 @@ describe 'Types', ->
         schema:
           properties:
             born:
-              type: 'date'
+              type: 'string'
+              format: 'date-time'
               default: null
-      a = Fish.create born:now
-      assert a.doc.born == now
+      a = Fish.create born:now.toISOString()
+      assert a.doc.born == now.toISOString()
 
     it 'should use the default value when not specified', ->
       sometime = new Date '1920-03-04'
@@ -94,10 +95,10 @@ describe 'Types', ->
         schema:
           properties:
             born:
-              type: 'date'
-              default: sometime
+              type: 'date-time'
+              default: sometime.toISOString()
       a = Fish.create {}
-      assert a.doc.born == sometime
+      assert a.doc.born == sometime.toISOString()
 
     it 'should use the default function when not specified', (done)->
       sometime = new Date
@@ -106,12 +107,12 @@ describe 'Types', ->
         schema:
           properties:
             born:
-              type: 'date'
-              default: -> new Date
+              type: 'date-time'
+              default: -> (new Date).toISOString()
 
       later = ->
         a = Fish.create {}
-        assert a.doc.born.getTime() > sometime.getTime()
+        assert (new Date Date.parse a.doc.born).getTime() > sometime.getTime()
         done()
       setTimeout later, 10
 

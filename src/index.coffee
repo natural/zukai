@@ -70,7 +70,7 @@ exports.ProtoModel = ProtoModel =
 
     self = @
     inst = under.extend {}, self, key: key, doc: doc, links: [], reply: {}
-    inst.setDefaults inst.schema, inst.doc
+    inst.setDefaults inst, inst.schema, inst.doc
     under.map inst.hooks.pre.create, (hook)-> hook inst
     validation = jsonschema.validate inst.doc, self.schema
 
@@ -360,16 +360,22 @@ exports.ProtoModel = ProtoModel =
       hooks
 
 
-  setDefaults: (schema, doc)->
+  setDefaults: (object, schema, doc)->
     under.each schema.properties, (prop, name)->
       if not doc[name]?
-        val = prop.default
-        if typeof val == 'function'
-          val = val()
-        if val isnt undefined
-          doc[name] = val
+        def = prop.default
+        if def isnt undefined
+          if typeof def == 'function'
+            def = def()
+          if def isnt undefined
+            def = JSON.parse JSON.stringify def
+        else
+          if prop.type == 'object'
+            def = {}
+        doc[name] = def
+
         if prop.properties
-          @setDefaults prop, doc[name]
+          object.setDefaults object, prop, doc[name]
 
 
   indexSearch: (query, callback)->
