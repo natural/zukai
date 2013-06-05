@@ -4,6 +4,7 @@ jsonschema = require 'jsonschema'
 under = require 'underscore'
 q = require 'q'
 
+{Validator} = require 'jsonschema'
 {EventEmitter2} = require 'eventemitter2'
 
 
@@ -28,6 +29,7 @@ exports.createModel = (name, defn)->
       pre:  {create:[], put:[], del:[]}
       post: {create:[], put:[], del:[]}
     schema: defn.schema or {}
+    validator: new Validator
 
   server = new EventEmitter2 defn.events
   delete defn.events
@@ -72,7 +74,7 @@ exports.ProtoModel = ProtoModel =
     inst = under.extend {}, self, key: key, doc: doc, links: [], reply: {}
     inst.setDefaults inst, inst.schema, inst.doc
     under.map inst.hooks.pre.create, (hook)-> hook inst
-    validation = jsonschema.validate inst.doc, self.schema
+    validation = self.validator.validate inst.doc, self.schema
 
     if validation?.errors?.length
       inst.invalid = validation
