@@ -246,14 +246,14 @@ key/bucket/tag triple.
   * `tag` required string, the name to use for the relationship
   * `target` required model object, the object to relate to this one
 
-Note that the object is not put to it's bucket after relating it to another
+Note that the object is not put to the bucket after relating it to another
 object, you have to do that manually.
 
 
 ###### `object.walk([options], [callback])`
 
 Retrieves the model objects(s) associated with this one.  Returns a promise that
-resolves to the related objects, or null if no related objects exist.
+resolves to the related objects, or `null` if no related objects exist.
 
   * `options`, optional hash, supply a `tag` key with the named relation, or
     `'*'` to retrieve all related objects
