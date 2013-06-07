@@ -176,6 +176,31 @@ exports.ProtoModel = ProtoModel =
     deferred.promise.nodeify callback
 
 
+  purge: (options, callback)->
+    self = @
+    deferred = q.defer()
+
+    if not self.connection
+      deferred.reject message: 'Not connected'
+      return deferred.promise.nodeify callback
+
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
+
+    self.connection.getKeys bucket: self.bucket, (reply)->
+      run = (key, cb)->
+        self.del key:key, (err)->
+          cb err
+      async.each (reply.keys or []), run, (err, results)->
+        if err
+          deferred.reject err
+        else
+          deferred.resolve results
+    deferred.promise.nodeify callback
+
+
   put: (options, callback)->
     self = @
     deferred = q.defer()

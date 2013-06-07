@@ -23,7 +23,7 @@ exports.plugins =
         return next new Error "No model #{type}"
 
       bucket = buckets[0]
-      links = (k for k in object.links when k.bucket==bucket and k.tag==tag)
+      links = (k for k in (object.links or []) when k.bucket==bucket and k.tag==tag)
 
       if minItems and links.length < minItems
         next new Error "Too few relations for #{type}:#{tag}"
