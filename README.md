@@ -236,6 +236,16 @@ Deletes the model object from the model's bucket.  Returns a promise.
     complete.
 
 
+###### `object.link(tag, [target])`
+
+Returns links associated with this object that match the tag and bucket.
+
+  * `tag` required string, the link name to retrieve
+  * `target` optional string, the name of the bucket to filter retrieved links
+
+The return value will be a link description or an array of link descriptions if
+more than one link matches.
+
 
 ###### `object.link(tag, target, [dupes=false])`
 
@@ -248,6 +258,9 @@ key/bucket/tag triple.
 
 Note that the object is not put to the bucket after relating it to another
 object, you have to do that manually.
+
+Also note that the `target` objecct doesn't have to be a model instance.  Any
+object with `key` and `bucket` attributes will work.
 
 
 ###### `object.walk([options], [callback])`

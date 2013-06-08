@@ -313,10 +313,20 @@ exports.ProtoModel = ProtoModel =
 
 
   link: (tag, obj, dupes=false)->
-    match = (lnk)->
-      lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
-    if dupes or not under.some @links, match
-      @links.push tag: tag, key: obj.key, bucket: obj.bucket
+    if not obj? or typeof obj == 'string'
+      # get a link
+      links = under.filter @links, (lnk)->
+        lnk.tag == tag and (if obj then lnk.bucket==obj else true)
+      if links and links.length == 1
+        links = links[0]
+      links
+
+    else
+      # put a link
+      match = (lnk)->
+        lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
+      if dupes or not under.some @links, match
+        @links.push tag: tag, key: obj.key, bucket: obj.bucket
 
 
   toJSON: ->

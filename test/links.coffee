@@ -4,7 +4,7 @@ assert = require 'assert'
 
 
 PrimaryModel = SecondaryModel = TertiaryModel = null
-
+primary = secondary = null
 
 
 describe 'Links', ->
@@ -29,12 +29,28 @@ describe 'Links', ->
   describe 'link method', ->
     it 'should not allow duplicate links if dupes=false', (done)->
       tag = 'it'
-      p = PrimaryModel.create 'key-0', a:0, b:-1
+      p = primary = PrimaryModel.create 'key-0', a:0, b:-1
       assert p.key
-      s = SecondaryModel.create 'key-00'
+      s = secondary = SecondaryModel.create 'key-00'
       assert p.link tag, s
       assert not p.link tag, s
       assert p.links.length == 1
+      done()
+
+    it 'should support getting a link by tag', (done)->
+      link = primary.link 'it'
+      assert link.key == secondary.key
+      links = primary.link 'nope'
+      assert links.length == 0
+      done()
+
+    it 'should support getting a link by tag and bucket', (done)->
+      link = primary.link 'it', SecondaryModel.bucket
+      assert link.key == secondary.key
+      links = primary.link 'it', 'nope'
+      assert links.length == 0
+      links = primary.link 'nope', SecondaryModel.bucket
+      assert links.length == 0
       done()
 
     it 'should allow duplicate links if dupes=true', (done)->
