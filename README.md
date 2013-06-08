@@ -126,7 +126,7 @@ Book.pre 'put', (object, next)->
   next()
 ```
 
-###### `Model.post('save', callback)`
+###### `Model.post('put', callback)`
 
 Post-put hooks run after the object is successfully saved to the bucket, but
 before the `put` event is emitted and before the promise is resolved.  Any error
