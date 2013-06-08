@@ -13,6 +13,7 @@ Riak ODM for Node.js.
 
 #### Contents
 
+  * [Install](#install)
   * [Example](#example)
   * [Plugins](#plugins)
   * [Hooks](#hooks)
@@ -21,6 +22,17 @@ Riak ODM for Node.js.
   * [Changelog](#changelog)
   * [About](#about)
   * [License](#license)
+
+
+<a id="install"></a>
+#### Install
+
+Installation is easy.  Add `--save` to the end of the install to update
+your project `package.json`.
+
+```sh
+$ npm install zukai
+```
 
 
 <a id="example"></a>
@@ -76,9 +88,7 @@ the continuation callback (i.e., `next()`) to continue processing the operation,
 and may indicate an error by supplying a value, e.g., `next(my_error)`.
 
 
-###### Pre-create
-
-`model.pre('create', callback)`
+###### `Model.pre('create', callback)`
 
 Pre-create hooks run after a new object is created and default properties are
 set, but before the object document is validated.  Example:
@@ -88,32 +98,24 @@ Book.pre 'create', (object)->
   object.doc.title = object.doc.title.toUpperCase()
 ```
 
-###### Post-create
-
-`model.post('create', callback)`
+###### `Model.post('create', callback)`
 
 Post-create hooks run after the object document is validated but before the
 object is returned from the `create` function.
 
-###### Pre-delete
-
-`model.pre('del', callback)`
+###### `Model.pre('del', callback)`
 
 Pre-delete hooks run before the object is removed from the bucket.  If a hook
 indicates an error (by calling `next()` with a value), the object will not be
 removed and the promise will be rejected.
 
-###### Post-delete
-
-`model.post('del', callback)`
+###### `Model.post('del', callback)`
 
 Post-delete hooks run after the object is successfully removed from the bucket,
 but before the `del` event is emitted and before the promise is resolved.  Any
 error produced by a post-delete hook will cause the promise to be rejected.
 
-###### Pre-put
-
-`model.pre('put', callback)`
+###### `Model.pre('put', callback)`
 
 Pre-put hooks run before the object is put to the bucket.  If the hook indicates
 an error, the object will not be saved.  Example:
@@ -124,9 +126,7 @@ Book.pre 'put', (object, next)->
   next()
 ```
 
-###### Post-put
-
-`model.post('save', callback)`
+###### `Model.post('save', callback)`
 
 Post-put hooks run after the object is successfully saved to the bucket, but
 before the `put` event is emitted and before the promise is resolved.  Any error

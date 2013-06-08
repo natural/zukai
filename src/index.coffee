@@ -302,7 +302,7 @@ exports.ProtoModel = ProtoModel =
       objects = under.map docs[0], (doc)->
         model = self.registry[doc.bucket]
         if model
-          return model.create doc.key, doc.data
+          return model.create doc.key, doc.data[0]
 
       if under.every objects, ((v)-> not not v)
         deferred.resolve objects
