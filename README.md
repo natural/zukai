@@ -237,7 +237,7 @@ Deletes the model object from the model's bucket.  Returns a promise.
 
 
 
-###### `object.relate(tag, target, [dupes=false])`
+###### `object.link(tag, target, [dupes=false])`
 
 Associates the object with the target using the given tag using links.  Pass in
 a truthy value as the third argument to allow multiple links for the same
@@ -253,7 +253,7 @@ object, you have to do that manually.
 ###### `object.walk([options], [callback])`
 
 Retrieves the model objects(s) associated with this one.  Returns a promise that
-resolves to the related objects, or `null` if no related objects exist.
+resolves to the linked objects, or `null` if no linked objects exist.
 
   * `options`, optional hash, supply a `tag` key with the named relation, or
     `'*'` to retrieve all related objects
@@ -355,7 +355,7 @@ documentation.
 
 Hash with all models created by the library.  Super nice for looking up models
 by name at runtime.  Used internally by the `walk` function to instantiate
-related values into model objects.
+linked values into model objects.
 
 
 ###### `object.setDefaults(schema, doc)`

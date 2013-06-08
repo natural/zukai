@@ -26,14 +26,14 @@ describe 'Links', ->
     done()
 
 
-  describe 'relate method', ->
+  describe 'link method', ->
     it 'should not allow duplicate links if dupes=false', (done)->
       tag = 'it'
       p = PrimaryModel.create 'key-0', a:0, b:-1
       assert p.key
       s = SecondaryModel.create 'key-00'
-      assert p.relate tag, s
-      assert not p.relate tag, s
+      assert p.link tag, s
+      assert not p.link tag, s
       assert p.links.length == 1
       done()
 
@@ -42,8 +42,8 @@ describe 'Links', ->
       p = PrimaryModel.create 'key-0', a:0, b:-1
       assert p.key
       s = SecondaryModel.create 'key-00'
-      assert p.relate tag, s, true
-      assert p.relate tag, s, true
+      assert p.link tag, s, true
+      assert p.link tag, s, true
       assert p.links.length == 2
       done()
 
@@ -56,7 +56,7 @@ describe 'Links', ->
         assert object.key == primary.key
 
         secondary = SecondaryModel.create 'key-2', c:3, d:4
-        secondary.relate tag, primary
+        secondary.link tag, primary
         secondary.put().then (object)->
           assert object.key == secondary.key
 
@@ -89,8 +89,8 @@ describe 'Links', ->
           assert q.key == secondary.key
 
           tertiary = TertiaryModel.create 'key-6', e:5, f:6
-          tertiary.relate tag, primary
-          tertiary.relate tag, secondary
+          tertiary.link tag, primary
+          tertiary.link tag, secondary
 
           tertiary.put().then (t)->
             assert t.key == tertiary.key
@@ -120,8 +120,8 @@ describe 'Links', ->
           assert q.key == secondary.key
 
           tertiary = TertiaryModel.create 'key-12', e:5, f:6
-          tertiary.relate tag, primary
-          tertiary.relate tag, secondary
+          tertiary.link tag, primary
+          tertiary.link tag, secondary
 
           tertiary.put().then (t)->
             assert t.key == tertiary.key
@@ -145,8 +145,8 @@ describe 'Links', ->
           assert q.key == secondary.key
 
           tertiary = TertiaryModel.create 'key-12', e:5, f:6
-          tertiary.relate tag, primary
-          tertiary.relate tag, secondary
+          tertiary.link tag, primary
+          tertiary.link tag, secondary
 
           tertiary.put().then (t)->
             assert t.key == tertiary.key
@@ -171,8 +171,8 @@ describe 'Links', ->
           assert q.key == secondary.key
 
           tertiary = TertiaryModel.create 'key-12', e:5, f:6
-          tertiary.relate tag, primary
-          tertiary.relate tag, secondary
+          tertiary.link tag, primary
+          tertiary.link tag, secondary
 
           tertiary.put().then (t)->
             assert t.key == tertiary.key

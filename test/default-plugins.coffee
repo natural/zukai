@@ -46,7 +46,7 @@ describe 'Default Plugins', ->
       hemingway = Author.create 'ernest', born:1899
 
       hemingway.put().catch ->
-        hemingway.relate 'birth-place', oakpark
+        hemingway.link 'birth-place', oakpark
         hemingway.put().then hemingway.del done
 
 
@@ -57,9 +57,9 @@ describe 'Default Plugins', ->
         maxItems: 2
 
       faulkner = Author.create 'will', born:1897
-      faulkner.relate 'advanced-payment', Book.create 'mosquitoes'
-      faulkner.relate 'advanced-payment', Book.create 'sanctuary'
-      faulkner.relate 'advanced-payment', Book.create 'pylon'
+      faulkner.link 'advanced-payment', Book.create 'mosquitoes'
+      faulkner.link 'advanced-payment', Book.create 'sanctuary'
+      faulkner.link 'advanced-payment', Book.create 'pylon'
 
       faulkner.put().catch (err)->
         assert err.message+'' == 'Error: Too many relations for Book:advanced-payment'
@@ -72,7 +72,7 @@ describe 'Default Plugins', ->
         tag: 'ship'
 
       a = Author.create 'heinlein'
-      a.relate 'ship', {}
+      a.link 'ship', {}
       a.put().catch (err)->
         assert "#{err.message}" == 'Error: No model Rocket'
         done()

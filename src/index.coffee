@@ -312,7 +312,7 @@ exports.ProtoModel = ProtoModel =
     return deferred.promise.nodeify callback
 
 
-  relate: (tag, obj, dupes=false)->
+  link: (tag, obj, dupes=false)->
     match = (lnk)->
       lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
     if dupes or not under.some @links, match
