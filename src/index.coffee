@@ -358,6 +358,12 @@ exports.ProtoModel = ProtoModel =
     @hooks.post[kwd].push callable
 
 
+  model: (name)->
+    for bucket, model of @registry
+      if name == bucket or name == model.name
+        return model
+
+
   defaultPutOptions:
     vclock: null
     w: 'default'

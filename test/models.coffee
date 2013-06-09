@@ -217,3 +217,15 @@ describe 'Model', ->
       instance.put(return_body:true).then (obj)->
         instance.del().then ->
           done()
+
+  describe 'model() method', ->
+    it 'should support retrieving models by name', (done)->
+      Model = createModel name: 'Named', bucket: 'named-bucket'
+
+      assert Model
+      assert Model == Model.model 'Named'
+      assert Model == Model.model 'named-bucket'
+
+      assert not Model.model 'any-other-thing'
+
+      done()
