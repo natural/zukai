@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/natural/zukai.png)](https://travis-ci.org/natural/zukai)
 
 ## zukai
-Riak ODM for Node.js.
+[Riak](http://basho.com/riak/) ODM for [Node.js](http://nodejs.org/).
 
 
 #### Features
@@ -91,7 +91,7 @@ and may indicate an error by supplying a value, e.g., `next(my_error)`.
 ###### `Model.pre('create', callback)`
 
 Pre-create hooks run after a new object is created and default properties are
-set, but before the object document is validated.  Example:
+set but before the object document is validated.  Example:
 
 ```coffee
 Book.pre 'create', (object)->
@@ -111,7 +111,7 @@ removed and the promise will be rejected.
 
 ###### `Model.post('del', callback)`
 
-Post-delete hooks run after the object is successfully removed from the bucket,
+Post-delete hooks run after the object is successfully removed from the bucket
 but before the `del` event is emitted and before the promise is resolved.  Any
 error produced by a post-delete hook will cause the promise to be rejected.
 
@@ -128,7 +128,7 @@ Book.pre 'put', (object, next)->
 
 ###### `Model.post('put', callback)`
 
-Post-put hooks run after the object is successfully saved to the bucket, but
+Post-put hooks run after the object is successfully saved to the bucket but
 before the `put` event is emitted and before the promise is resolved.  Any error
 produced by a post-put hook will cause the promise to be rejected.
 
@@ -149,13 +149,12 @@ Talker = createModel
   name: 'Talker'
   events:
     wildcard: true
-
 ```
 
 ###### `create`
 
 The `create` event is emitted after the object has been fully instantiated and
-validated, and after all of the post-create hooks have run.
+validated and after all of the post-create hooks have run.
 
 ###### `del`
 
@@ -175,19 +174,18 @@ post-save hooks have run.
 
 Factory function that creates a new Model.
 
-  * `name` optional string, the name of the model.
+  * `name` optional string, the name of the model
 
 The `definition` object should have keys thusly:
 
   * `name`, required string (if first parameter is missing), the name of the model
   * `bucket`, optional, the name of the Riak bucket from which to read and write
-  objects
+  objects; if omitted, the bucket name will be the pluralized form of the model name
   * `connection`, optional for create (but required for most operations), an instance
   of the RiakPBC client
   * `schema`, optional, JSON schema
-  * `methods`, optional, an object of functions to add to the Model
   * `indexes`, optional, a function that returns an array of indexes included in
-  the `put()` call.
+  the `put()` call
 
 
 ###### `zukai.ProtoModel`
@@ -203,7 +201,7 @@ Static method that creates and returns an object of the given Model.
 
   * `key`, optional string, if given will be the key for the object
   within the bucket
-  * `values`, optional hash, properties to set on the model object
+  * `values`, optional object, properties to set on the model object
 
 
 ###### `Model.get([key], [options], [callback])`
@@ -212,7 +210,7 @@ Static method that reads the value at the given key from the model's bucket.
 Returns a promise.
 
   * `key`, required string if not present in `options`, string, the key to read
-  * `options`, optional hash, passed to the connection `get` call
+  * `options`, optional object, passed to the connection `get` call
   * `callback`, optional function, called with `(error, object)` after read
   is complete.
 
@@ -222,7 +220,7 @@ Returns a promise.
 Static method to save the object document to the model's bucket.  Returns a
 promise.
 
-  * `options`, optional hash, passed to the connection `put` call
+  * `options`, optional object, passed to the connection `put` call
   * `callback`, optional function, called with `(error)` after save
   is complete.
 
@@ -231,7 +229,7 @@ promise.
 
 Deletes the model object from the model's bucket.  Returns a promise.
 
-  * `options`, optional hash, passed to the connection `del` call
+  * `options`, optional object, passed to the connection `del` call
   * `callback`, optional function, called with `(error)` after delete is
     complete.
 
@@ -257,10 +255,18 @@ key/bucket/tag triple.
   * `target` required model object, the object to relate to this one
 
 Note that the object is not put to the bucket after relating it to another
-object, you have to do that manually.
+object, you have to do that explicitly.
 
-Also note that the `target` objecct doesn't have to be a model instance.  Any
+Also note that the `target` object doesn't have to be a model instance.  Any
 object with `key` and `bucket` attributes will work.
+
+
+###### `Model.model(name) or object.model(name)`
+
+Returns the Model object matching the given model name or bucket.  If no
+match is found, returns `undefined`.
+
+  * `name`, required string, the model name or bucket to match
 
 
 ###### `object.walk([options], [callback])`
@@ -268,7 +274,7 @@ object with `key` and `bucket` attributes will work.
 Retrieves the model objects(s) associated with this one.  Returns a promise that
 resolves to the linked objects, or `null` if no linked objects exist.
 
-  * `options`, optional hash, supply a `tag` key with the named relation, or
+  * `options`, optional object, supply a `tag` key with the named relation, or
     `'*'` to retrieve all related objects
   * `callback`, optional function, called with `(err, documents)` when the walk
     is complete
@@ -280,9 +286,9 @@ with one request.
 ###### `object.indexSearch(query, [callback])`
 
 Makes an index search request, using the index and parameters in the `query`
-hash.  The callback is run with `(err, keys)` when complete.  Returns a promise.
+object.  The callback is run with `(err, keys)` when complete.  Returns a promise.
 
-  * `query`, required hash, supply `qtype` and other query parameters
+  * `query`, required object, supply `qtype` and other query parameters
   * `callback`, optional function, called when complete
 
 
@@ -345,28 +351,28 @@ Encodes the given value into a string.  The default implementation is
 
 ###### `Model.defaultPutOptions`
 
-Hash with the default values used when calling the connection `put` method.  The
-keys and values in the hash mirror the defaults in the [PBC Store Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Store-Object/)
+Object with the default values used when calling the connection `put` method.  The
+keys and values in the object mirror the defaults in the [PBC Store Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Store-Object/)
 documentation.
 
 
 ###### `Model.defaultGetOptions`
 
-Hash with the default values used when calling the connection `get` method.  The
-keys and values in the hash mirror the defaults in the [PBC Fetch Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Fetch-Object/)
+Object with the default values used when calling the connection `get` method.  The
+keys and values in the object mirror the defaults in the [PBC Fetch Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Fetch-Object/)
 documentation.
 
 
 ###### `Model.defaultDelOptions`
 
-Hash with the default values used when calling the connection `del` method.  The
-keys and values in the hash mirror the defaults in the [PBC Delete Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Delete-Object/)
+Object with the default values used when calling the connection `del` method.  The
+keys and values in the object mirror the defaults in the [PBC Delete Object](http://docs.basho.com/riak/latest/references/apis/protocol-buffers/PBC-Delete-Object/)
 documentation.
 
 
 ###### `Model.registry` and `object.registry`
 
-Hash with all models created by the library.  Super nice for looking up models
+Object with all models created by the library.  Super nice for looking up models
 by name at runtime.  Used internally by the `walk` function to instantiate
 linked values into model objects.
 
