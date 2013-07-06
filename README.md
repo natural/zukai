@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/natural/zukai.png)](https://travis-ci.org/natural/zukai)
+[![Dependency Status](https://gemnasium.com/natural/zukai.png)](https://gemnasium.com/natural/zukai)
+[![NPM version](https://badge.fury.io/js/zukai.png)](http://badge.fury.io/js/zukai)
 
 ## zukai
 [Riak](http://basho.com/riak/) ODM for [Node.js](http://nodejs.org/).

@@ -85,6 +85,8 @@ exports.ProtoModel = ProtoModel =
       self.emit 'create', inst
     inst
 
+  getKeys: (callback)->
+    @connection.getKeys bucket:@bucket, callback
 
   get: (key, options, callback)->
     if typeof key == 'object'
@@ -313,6 +315,8 @@ exports.ProtoModel = ProtoModel =
 
 
   link: (tag, obj, dupes=false)->
+    # TODO: remove dupes param, support one-string and two-string gets
+    # with string and object as set.
     if not obj? or typeof obj == 'string'
       # get a link
       links = under.filter @links, (lnk)->
