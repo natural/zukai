@@ -27,17 +27,13 @@ describe 'Links', ->
 
 
   describe 'link method', ->
-    it 'should not allow duplicate links if dupes=false', (done)->
+    it 'should support getting a link by tag', (done)->
       tag = 'it'
       p = primary = PrimaryModel.create 'key-0', a:0, b:-1
       assert p.key
       s = secondary = SecondaryModel.create 'key-00'
       assert p.link tag, s
-      assert not p.link tag, s
-      assert p.links.length == 1
-      done()
 
-    it 'should support getting a link by tag', (done)->
       link = primary.link 'it'
       assert link.key == secondary.key
       links = primary.link 'nope'
@@ -53,14 +49,22 @@ describe 'Links', ->
       assert links.length == 0
       done()
 
-    it 'should allow duplicate links if dupes=true', (done)->
-      tag = 'it'
-      p = PrimaryModel.create 'key-0', a:0, b:-1
-      assert p.key
-      s = SecondaryModel.create 'key-00'
-      assert p.link tag, s, true
-      assert p.link tag, s, true
-      assert p.links.length == 2
+    it 'should support updating a link if it already exists', (done)->
+      primary.links.splice 0, primary.links.length
+      primary.link 't', bucket:'b', key:'k'
+      link = primary.link 't'
+
+      assert link.tag == 't'
+      assert link.bucket == 'b'
+      assert link.key == 'k'
+
+      primary.link 't', bucket:'b', key:'J'
+      updated =  primary.link 't'
+      assert link.tag == 't'
+      assert link.bucket == 'b'
+      assert link.key == 'J'
+
+      assert primary.links.length == 1
       done()
 
 

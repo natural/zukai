@@ -314,9 +314,7 @@ exports.ProtoModel = ProtoModel =
     return deferred.promise.nodeify callback
 
 
-  link: (tag, obj, dupes=false)->
-    # TODO: remove dupes param, support one-string and two-string gets
-    # with string and object as set.
+  link: (tag, obj)->
     if not obj? or typeof obj == 'string'
       # get a link
       links = under.filter @links, (lnk)->
@@ -327,11 +325,14 @@ exports.ProtoModel = ProtoModel =
 
     else
       # put a link
-      match = (lnk)->
-        lnk.tag == tag and lnk.key == obj.key and lnk.bucket == obj.bucket
-      if dupes or not under.some @links, match
+      updates = under.filter @links, (link)->
+        link.tag == tag and link.bucket == obj.bucket
+      if updates.length
+        under.each updates, (link)->
+          link.key = obj.key
+      else
         @links.push tag: tag, key: obj.key, bucket: obj.bucket
-
+      @links
 
   toJSON: ->
     @doc
