@@ -58,7 +58,7 @@ describe 'Links', ->
       assert link.bucket == 'b'
       assert link.key == 'k'
 
-      primary.link 't', bucket:'b', key:'J'
+      primary.link 't', bucket:'b', key:'J', update=true
       updated =  primary.link 't'
       assert link.tag == 't'
       assert link.bucket == 'b'

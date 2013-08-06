@@ -314,7 +314,7 @@ exports.ProtoModel = ProtoModel =
     return deferred.promise.nodeify callback
 
 
-  link: (tag, obj)->
+  link: (tag, obj, update=false)->
     if not obj? or typeof obj == 'string'
       # get a link
       links = under.filter @links, (lnk)->
@@ -325,14 +325,16 @@ exports.ProtoModel = ProtoModel =
 
     else
       # put a link
-      updates = under.filter @links, (link)->
-        link.tag == tag and link.bucket == obj.bucket
-      if updates.length
-        under.each updates, (link)->
-          link.key = obj.key
+      if update
+        updates = under.filter @links, (link)->
+          link.tag == tag and link.bucket == obj.bucket
+        if updates.length
+          under.each updates, (link)->
+            link.key = obj.key
       else
         @links.push tag: tag, key: obj.key, bucket: obj.bucket
       @links
+
 
   toJSON: ->
     @doc
