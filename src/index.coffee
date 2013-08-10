@@ -11,39 +11,7 @@ q = require 'q'
 exports.plugins = require('./plugins').plugins
 
 
-exports.createModel = (name, defn)->
-  if typeof name == 'object'
-    defn = name
-    name = defn.name
-  else if not defn
-    defn = {}
-
-  if not name
-    throw new TypeError 'Model name required'
-
-  if not defn.bucket
-    defn.bucket = inflection.pluralize name.toLowerCase()
-
-  base =
-    hooks:
-      pre:  {create:[], put:[], del:[]}
-      post: {create:[], put:[], del:[]}
-    schema: defn.schema or {}
-    validator: new Validator
-
-  server = new EventEmitter2 defn.events
-  delete defn.events
-
-  # hm...
-  #if defn.connection
-  #  defn.connection.client.setNoDelay()
-  #  defn.connection.client.setKeepAlive()
-
-  ProtoModel.registry[defn.bucket] = under.extend server,
-    exports.ProtoModel, base, defn
-
-
-exports.ProtoModel = ProtoModel =
+exports.ProtoModel =
   # These properties are totally replaced by createModel;
   # however, puting them here allows for direct use of
   # the model.  That's crazy, tho, so don't do it.
@@ -261,7 +229,6 @@ exports.ProtoModel = ProtoModel =
 
     deferred.promise.nodeify callback
 
-
   walk: (options, callback)->
     tag = bucket = '*'
     switch typeof options
@@ -334,7 +301,6 @@ exports.ProtoModel = ProtoModel =
       else
         @links.push tag: tag, key: obj.key, bucket: obj.bucket
       @links
-
 
   toJSON: ->
     @doc
@@ -445,14 +411,222 @@ exports.ProtoModel = ProtoModel =
     return deferred.promise.nodeify callback
 
 
-# For reference, a reply object from riakpbc looks like this:
-#
-# { content:
-#    [ { value: '{"e":5,"f":6}',
-#        content_type: 'application/json',
-#        vtag: '58VwhV1xnOUOKl8VjT1Uj3',
-#        links: [Object],
-#        last_mod: 1369679311,
-#        last_mod_usecs: 898272 } ],
-#   vclock: <Buffer 6b ce ... 2c 00> }
-#
+exports.createModel = (name, defn)->
+  if typeof name == 'object'
+    defn = name
+    name = defn.name
+  else if not defn
+    defn = {}
+
+  if not name
+    throw new TypeError 'Model name required'
+
+  if not defn.bucket
+    defn.bucket = inflection.pluralize name.toLowerCase()
+
+  base =
+    hooks:
+      pre:  {create:[], put:[], del:[]}
+      post: {create:[], put:[], del:[]}
+    schema: defn.schema or {}
+    validator: new Validator
+
+  server = new EventEmitter2 defn.events
+  delete defn.events
+
+  exports.ProtoModel.registry[defn.bucket] = under.extend server,
+    exports.ProtoModel, base, defn
+
+
+ProtoCounterBase =
+  name: 'ProtoCounter'
+  contentType: undefined
+
+  defaultPutOptions:
+    w: 'default'
+    dw: 'default'
+    returnvalue: false
+    pw: 'default'
+
+  defaultGetOptions:
+    r: 'default'
+    pr: 'default'
+    basic_quorum: false
+    notfound_ok: false
+
+  defaultDelOptions:
+    rw: 'default'
+    r: 'default'
+    w: 'default'
+    pr: 'default'
+    pw: 'default'
+    pd: 'default'
+
+  get: (key, options, callback)->
+    if typeof key == 'object'
+      options = key
+      key = options.key
+    if typeof options == 'function'
+      callback = options
+      options = {}
+
+    self = @
+    deferred = q.defer()
+
+    if not self.connection
+      deferred.reject message: 'Not connected'
+      return deferred.promise.nodeify callback
+
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
+
+    request = bucket: self.bucket, key: key
+    under.defaults request, options, self.defaultGetOptions
+
+    self.connection.getCounter request, (reply)->
+      if reply?.errmsg
+        deferred.reject message: reply.errmsg
+      else if reply?.value
+        inst = self.create key, value: reply.value
+        deferred.resolve inst
+      else
+        deferred.resolve null
+    deferred.promise.nodeify callback
+
+
+  put: (options, callback)->
+    self = @
+    deferred = q.defer()
+
+    if not self.connection
+      deferred.reject message: 'Not connected'
+      return deferred.promise.nodeify callback
+
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
+
+    validation = jsonschema.validate self.doc, self.schema
+
+    if validation?.errors?.length
+      self.invalid = validation
+      deferred.reject message: 'Invalid'
+      return deferred.promise.nodeify callback
+
+    run = (hook, cb)->
+      hook self, (err)->
+        cb err, self
+
+    async.each (self.getHooks 'pre', 'put'), run, (err, results)->
+      if err
+        return deferred.reject message: err
+
+      request =
+        bucket: self.bucket
+        amount: self.doc.value
+        key: self.key
+
+      under.defaults request, options, self.defaultPutOptions
+
+      self.connection.updateCounter request, (reply)->
+        if reply.errmsg
+          return deferred.reject message: reply.errmsg
+
+        self.reply = reply
+
+        async.each (self.getHooks 'post', 'put'), run, (err, results)->
+          if err
+            self.invalid = err
+            deferred.reject message: err
+          else
+            self.invalid = false
+            self.emit 'put', self
+            deferred.resolve self
+
+    deferred.promise.nodeify callback
+
+
+  del: (options, callback)->
+    self = @
+    deferred = q.defer()
+
+    if not self.connection
+      deferred.reject message: 'Not connected'
+      return deferred.promise.nodeify callback
+
+    if typeof options == 'function'
+      callback = options
+    else if not options
+      options = {}
+
+    key = self.key or options.key
+    if not key
+      deferred.reject message: 'No key'
+      return deferred.promise.nodeify callback
+
+    run = (hook, cb)->
+      hook self, (err)->
+        cb err, self
+
+    async.each (self.getHooks 'pre', 'del'), run, (err, results)->
+      if err
+        deferred.reject message: err
+      else
+        request = bucket: self.bucket, key: key
+        under.defaults request, options, self.defaultDelOptions
+
+        self.connection.del request, (reply)->
+          if reply.errmsg
+            deferred.reject message: reply.errmsg
+          else
+            self.deleted = true
+            self.reply = reply
+            async.each (self.getHooks 'post', 'del'), run, (err)->
+              if err
+                deferred.reject message: err
+              else
+                self.emit 'del', self
+                deferred.resolve null
+    deferred.promise.nodeify callback
+
+exports.ProtoCounter = under.extend {}, exports.ProtoModel, ProtoCounterBase
+
+
+# this is a monkey+c, monkey+v of the createModel function above;
+# wrapping it or making it into a partial was unclear.  may want
+# or need to revisit the approach later.
+exports.createCounterModel = (name, defn)->
+  if typeof name == 'object'
+    defn = name
+    name = defn.name
+  else if not defn
+    defn = {}
+
+  if not name
+    throw new TypeError 'Model name required'
+
+  if not defn.bucket
+    defn.bucket = inflection.pluralize name.toLowerCase()
+
+  if not defn.schema
+    defn.schema =
+      additionalProperties: false
+      properties:
+        value:
+          type: 'number'
+
+  base =
+    hooks:
+      pre:  {create:[], put:[], del:[]}
+      post: {create:[], put:[], del:[]}
+    schema: defn.schema or {}
+    validator: new Validator
+
+  server = new EventEmitter2 defn.events
+  delete defn.events
+
+  exports.ProtoCounter.registry[defn.bucket] = under.extend server,
+    exports.ProtoCounter, base, defn

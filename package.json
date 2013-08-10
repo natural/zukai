@@ -1,6 +1,6 @@
 {
   "name": "zukai",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Riak ODM",
   "homepage": "https://github.com/natural/zukai",
   "main": "lib/index.js",
@@ -33,10 +33,10 @@
   "dependencies": {
     "inflection": "~1.2.5",
     "async": "~0.2.6",
-    "riakpbc": "0.0.12",
     "jsonschema": "git://github.com/tdegrunt/jsonschema.git#d3ad55c1bf0d096a2b388b016bf28cda59cc3a4f",
     "q": "~0.9.4",
     "eventemitter2": "~0.4.11",
-    "underscore": "~1.5.1"
+    "underscore": "~1.5.1",
+    "riakpbc": "0.0.17"
   }
 }

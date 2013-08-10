@@ -133,6 +133,8 @@ describe 'Model', ->
             name:
               type: 'string'
 
+      connection.setBucket {bucket: Model.bucket, props: {allow_mult: false}}, ->
+
       instance = Model.create name:'goar'
       instance.put().then (inst)->
         assert inst
@@ -159,13 +161,21 @@ describe 'Model', ->
               required: true
 
       key = 'known-key'
+
+      connection.setBucket {bucket: Model.bucket, props: {allow_mult: false}}, ->
       instance = Model.create key, name:'algorithm'
-      instance.put().then ->
-        instance.get(key, {head:1}).then (obj)->
+
+      okay = (obj)->
           assert obj.key == key
           assert Object.keys(obj.doc).length == 0
           assert obj.reply.content[0].value == ''
           instance.del().then done
+      err = ->
+        console.log 'error', arguments
+        done()
+
+      instance.put().then ->
+        instance.get(key, {head:1}).then(okay).catch(err)
 
   describe 'options to .put()', ->
     it 'should support return_body:true', (done)->
@@ -201,7 +211,7 @@ describe 'Model', ->
         assert obj.reply.content[0].value == ''
         instance.del().then done
 
-  describe.skip 'options to .del()', ->
+  describe 'options to .del()', ->
     it 'should support something', (done)->
       Model = createModel
         name: 'gore'
