@@ -239,3 +239,23 @@ describe 'Model', ->
       assert not Model.model 'any-other-thing'
 
       done()
+
+  describe 'rename() method', ->
+    it 'should support renaming keys', (done)->
+      Model = createModel
+        name: 'foo'
+        bucket: 'rename-bucket'
+        connection: connection
+
+      first = Model.create key: 'first'
+      first.put (err, doc)->
+        assert not err
+        assert doc.key == first.key
+        first.rename 'second', (err, second)->
+          assert not err
+          assert second.key == 'second'
+
+          Model.get 'first', (err, docs)->
+            assert not err
+            assert not docs
+            second.del().then done

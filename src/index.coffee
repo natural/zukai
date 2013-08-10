@@ -53,8 +53,8 @@ exports.ProtoModel =
       self.emit 'create', inst
     inst
 
-  getKeys: (callback)->
-    @connection.getKeys bucket:@bucket, callback
+  keys: (callback)->
+    @connection.getKeys bucket: @bucket, callback
 
   get: (key, options, callback)->
     if typeof key == 'object'
@@ -115,7 +115,7 @@ exports.ProtoModel =
     else if not options
       options = {}
 
-    key = self.key or options.key
+    key = options.key or self.key
     if not key
       deferred.reject message: 'No key'
       return deferred.promise.nodeify callback
@@ -145,6 +145,36 @@ exports.ProtoModel =
                 deferred.resolve null
     deferred.promise.nodeify callback
 
+  rename: (target, callback)->
+    self = @
+    deferred = q.defer()
+
+    if not self.connection
+      deferred.reject message: 'Not connected'
+      return deferred.promise.nodeify callback
+
+    self.get target, (err, existing)->
+      if err
+        deferred.reject err
+      else if existing
+        deferred.reject 'target exists'
+      else
+        source = self.key
+        self.key = target
+        self.put (err, obj)->
+          if err
+            self.key = source
+            deferred.reject 'could not put target key'
+          else
+            self.del key: source, (err)->
+              if err
+                self.key = source
+                msg = 'could not delete source key; both keys now exist'
+                deferred.reject msg
+              else
+                deferred.resolve self
+
+    deferred.promise.nodeify callback
 
   purge: (options, callback)->
     self = @
@@ -159,9 +189,9 @@ exports.ProtoModel =
     else if not options
       options = {}
 
-    self.connection.getKeys bucket: self.bucket, (reply)->
+    self.keys (reply)->
       run = (key, cb)->
-        self.del key:key, (err)->
+        self.del key: key, (err)->
           cb err
       async.each (reply.keys or []), run, (err, results)->
         if err
