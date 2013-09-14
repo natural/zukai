@@ -1,6 +1,6 @@
 assert = require 'assert'
 {isEqual} = require 'underscore'
-{createModel} = require '../src'
+{createModel} = require '../src/model'
 
 
 describe 'Types', ->
@@ -13,7 +13,7 @@ describe 'Types', ->
             jinx:
               type: 'number'
               default: 3.1
-      a = Berry.create jinx:4.2
+      a = Berry.create doc: jinx:4.2
       assert a.doc.jinx == 4.2
 
     it 'should use the default value when not specified', ->
@@ -48,7 +48,7 @@ describe 'Types', ->
             kind:
               type: 'string'
               default: 'cup'
-      a = Dish.create kind:'plate'
+      a = Dish.create doc: kind:'plate'
       assert a.doc.kind == 'plate'
 
     it 'should use the default value when not specified', ->
@@ -85,7 +85,7 @@ describe 'Types', ->
               type: 'string'
               format: 'date-time'
               default: null
-      a = Fish.create born:now.toISOString()
+      a = Fish.create doc:born:now.toISOString()
       assert a.doc.born == now.toISOString()
 
     it 'should use the default value when not specified', ->
@@ -126,7 +126,7 @@ describe 'Types', ->
             hives:
               type: 'array'
               default: []
-      a = Honey.create hives:[1,2,3]
+      a = Honey.create doc:hives:[1,2,3]
       assert a.doc.hives.length == 3
 
     it 'should use the default value when not specified', ->
@@ -162,7 +162,7 @@ describe 'Types', ->
             hives:
               type: 'boolean'
               default: false
-      a = Honey.create hives:true
+      a = Honey.create doc:hives:true
       assert a.doc.hives == true
 
     it 'should use the default value when not specified', ->
@@ -199,7 +199,7 @@ describe 'Types', ->
             jinx:
               type: 'integer'
               default: 3
-      a = Berry.create jinx:4
+      a = Berry.create doc: jinx:4
       assert a.doc.jinx == 4
 
     it 'should use the default value when not specified', ->
@@ -235,7 +235,7 @@ describe 'Types', ->
             jinx:
               type: 'object'
               default: {}
-      a = Berry.create jinx:{}
+      a = Berry.create doc: jinx:{}
       assert isEqual, a.doc.jinx, {}
 
     it 'should use the default value when not specified', ->
@@ -274,7 +274,7 @@ describe 'Types', ->
             jinx:
               type: 'null'
               default: null
-      a = Berry.create jinx:null
+      a = Berry.create doc: jinx:null
       assert a.doc.jinx == null
 
     it 'should use the default value when not specified', ->

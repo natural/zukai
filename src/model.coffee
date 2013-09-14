@@ -1,8 +1,8 @@
-{assign, clone} = require 'lodash'
+{assign, clone, each, map} = require 'lodash'
 {Validator} = require 'jsonschema'
 {EventEmitter2} = require 'eventemitter2'
-setName = require 'function-name'
 {pluralize} = require 'inflection'
+setName = require 'function-name'
 
 
 # This is the base/meta class for models.  Subclasses are created
@@ -10,6 +10,7 @@ setName = require 'function-name'
 exports.BaseModel = class BaseModel
   @bucket: null
   @contentType: 'application/json'
+  @schema: {}
 
   @hooks:
     pre: {create: [], put: [], del: {}}
@@ -44,12 +45,40 @@ exports.BaseModel = class BaseModel
       inst.doc = clone options.doc, true
     else
       inst.doc = {}
+    inst.setDefaults inst, inst.schema, inst.doc
+
+    validation = cls.validator.validate inst.doc, cls.schema
+
+    if validation?.errors?.length
+      inst.invalid = validation
+      inst.doc = {}
+    else
+      inst.invalid = false
+      map cls.hooks.post.create, (hook)-> hook inst
+      cls.server.emit 'create', inst
 
     # pre-create hooks
-    # validation
+
     # if valid, run post-create hooks, emit 'create'
 
     inst
+
+  setDefaults: (object, schema, doc)->
+    each schema.properties, (prop, name)->
+      if not doc[name]?
+        def = prop.default
+        if def isnt undefined
+          if typeof def == 'function'
+            def = def()
+          if def isnt undefined
+            def = JSON.parse JSON.stringify def
+        else
+          if prop.type == 'object'
+            def = {}
+        doc[name] = def
+
+        if prop.properties
+          object.setDefaults object, prop, doc[name]
 
   @get: ->
     @create {}
@@ -126,11 +155,10 @@ exports.createModel = createModel = (defn, base=BaseModel)->
 
   if not defn.bucket
     defn.bucket = pluralize name.toLowerCase()
-  bucket = defn.bucket
 
+  bucket = defn.bucket
   schema = clone (defn.schema or {}), true
 
-  server = new EventEmitter2 (defn.events or {})
 
   modelClass = class extends base
     @bucket: bucket
@@ -140,10 +168,8 @@ exports.createModel = createModel = (defn, base=BaseModel)->
     @defaultDelDefn: clone base.defaultDelDefn, true
     @defaultGetDefn: clone base.defaultGetDefn, true
     @defaultPutDefn: clone base.defaultPutDefn, true
-    validator: new Validator
-
-  assign modelClass, server
+    @validator: new Validator
+    @server: new EventEmitter2 (defn.events or {})
 
   setName modelClass, name
-
   modelClass

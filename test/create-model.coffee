@@ -5,7 +5,7 @@ assert = require 'assert'
 connection = null
 
 
-describe 'Creating Model', ->
+describe 'Creating Models', ->
   before (done)->
     connection = createClient()
     done()

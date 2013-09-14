@@ -1,6 +1,6 @@
 assert = require 'assert'
 {createClient} = require 'riakpbc'
-{createModel} = require '../src'
+{createModel} = require '../src/model'
 
 
 Model = null
@@ -21,12 +21,12 @@ describe 'Events', ->
 
   describe 'create event', ->
     it 'should fire', (done)->
-      Model.on 'create', (inst)->
+      Model.server.on 'create', (inst)->
         assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'create'
+        Model.server.removeAllListeners 'create'
         done()
 
-      alice = Model.create name:'alice', age:21
+      alice = Model.create doc: name:'alice', age:21
 
   describe 'delete event', ->
     it 'should fire', (done)->

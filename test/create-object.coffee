@@ -2,6 +2,7 @@ assert = require 'assert'
 {createClient} = require 'riakpbc'
 {createModel} = require '../src/model'
 
+
 connection = null
 
 

@@ -10,3 +10,8 @@ before_install:
   - "sudo service riak start"
 
 before_script: sudo /usr/sbin/search-cmd install test
+
+
+branches:
+  only:
+    - master

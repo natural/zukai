@@ -1,11 +1,9 @@
 assert = require 'assert'
 {createClient} = require 'riakpbc'
-{createModel} = require '../src'
-
+{createModel} = require '../src/model'
 
 
 describe 'Validators', ->
-
 
   describe 'minimum', ->
     Model = createModel
@@ -18,14 +16,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:25
+      instance = Model.create doc: val:25
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:1
+      instance = Model.create doc: val:1
       assert instance.invalid
       done()
 
@@ -42,14 +40,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:25
+      instance = Model.create doc: val:25
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:5
+      instance = Model.create doc: val:5
       assert instance.invalid
       done()
 
@@ -65,14 +63,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:1
+      instance = Model.create doc: val:1
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:10
+      instance = Model.create doc: val:10
       assert instance.invalid
       done()
 
@@ -89,14 +87,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:20
+      instance = Model.create doc: val:20
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:25
+      instance = Model.create doc: val:25
       assert instance.invalid
       done()
 
@@ -112,14 +110,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:10
+      instance = Model.create doc: val:10
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:2
+      instance = Model.create doc: val:2
       assert instance.invalid
       done()
 
@@ -135,14 +133,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:10
+      instance = Model.create doc: val:10
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create foo:2
+      instance = Model.create doc: foo:2
       assert instance.invalid
       done()
 
@@ -158,14 +156,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'123'
+      instance = Model.create doc: val:'123'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:'abc'
+      instance = Model.create doc: val:'abc'
       assert instance.invalid
       done()
 
@@ -183,14 +181,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'127.0.0.1'
+      instance = Model.create doc: val:'127.0.0.1'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:'abc'
+      instance = Model.create doc: val:'abc'
       assert instance.invalid
       done()
 
@@ -206,14 +204,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'abcdef'
+      instance = Model.create doc: val:'abcdef'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:'ab'
+      instance = Model.create doc: val:'ab'
       assert instance.invalid
       done()
 
@@ -229,14 +227,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'abc'
+      instance = Model.create doc: val:'abc'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:'abdef'
+      instance = Model.create doc: val:'abdef'
       assert instance.invalid
       done()
 
@@ -252,14 +250,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:[1,2,3]
+      instance = Model.create doc: val:[1,2,3]
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:[4,5]
+      instance = Model.create doc: val:[4,5]
       assert instance.invalid
       done()
 
@@ -275,14 +273,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:[1,2,3]
+      instance = Model.create doc: val:[1,2,3]
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:[1,2,3,4,5]
+      instance = Model.create doc: val:[1,2,3,4,5]
       assert instance.invalid
       done()
 
@@ -298,14 +296,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:[1,2,3]
+      instance = Model.create doc: val:[1,2,3]
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:[1,2,3,1]
+      instance = Model.create doc: val:[1,2,3,1]
       assert instance.invalid
       done()
 
@@ -321,14 +319,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'eggs'
+      instance = Model.create doc: val:'eggs'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:'spam'
+      instance = Model.create doc: val:'spam'
       assert instance.invalid
       done()
 
@@ -344,17 +342,17 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:'eggs'
+      instance = Model.create doc: val:'eggs'
       assert instance.doc
       assert not instance.invalid
       done()
 
     it 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:123
+      instance = Model.create doc: val:123
       assert instance.invalid
 
-      instance = Model.create val:new Date
+      instance = Model.create doc: val:new Date
       assert instance.invalid
 
       done()
@@ -378,14 +376,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:{a:1, b:2}
+      instance = Model.create doc: val:{a:1, b:2}
       assert instance.doc
       assert not instance.invalid
       done()
 
     it.skip 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:{a:1, b:false}
+      instance = Model.create doc: val:{a:1, b:false}
       console.log instance.invalid, instance.doc
       assert instance.invalid
       done()
@@ -403,14 +401,14 @@ describe 'Validators', ->
 
     it 'should validate when valid', (done)->
       assert Model
-      instance = Model.create val:{bar:1, foo:'yes'}
+      instance = Model.create doc: val:{bar:1, foo:'yes'}
       assert instance.doc
       assert not instance.invalid
       done()
 
     it.skip 'should not validate when invalid', (done)->
       assert Model
-      instance = Model.create val:{bar:3}
+      instance = Model.create doc: val:{bar:3}
       #assert instance.invalid
       done()
 
