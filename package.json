@@ -37,6 +37,8 @@
     "q": "~0.9.4",
     "eventemitter2": "~0.4.11",
     "underscore": "~1.5.1",
-    "riakpbc": "0.0.17"
+    "riakpbc": "0.0.17",
+    "lodash": "~1.3.1",
+    "function-name": "0.0.1"
   }
 }
