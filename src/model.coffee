@@ -2,7 +2,7 @@
 {Validator} = require 'jsonschema'
 {EventEmitter2} = require 'eventemitter2'
 setName = require 'function-name'
-
+{pluralize} = require 'inflection'
 
 
 # This is the base/meta class for models.  Subclasses are created
@@ -21,16 +21,13 @@ exports.BaseModel = class BaseModel
   @post: ->
     'imma post plugin'
 
-
   @create: (options)->
     cls = @
     inst = new cls
-
     inst.key = options.key or null
 
-
     # copy some class properties; these can be modified per instance
-    for name in ['connection', 'bucket', 'contentType', 'modelName']
+    for name in ['connection', 'bucket', 'contentType']
       inst[name] = cls[name]
 
     # shadow other class properties; these can't be modified per instance
@@ -123,13 +120,19 @@ exports.registry = registry = {}
 
 
 exports.createModel = createModel = (defn, base=BaseModel)->
+  name = defn?.name
+  if not name
+    throw new Error 'Model name required'
+
+  if not defn.bucket
+    defn.bucket = pluralize name.toLowerCase()
   bucket = defn.bucket
+
   schema = clone (defn.schema or {}), true
 
   server = new EventEmitter2 (defn.events or {})
 
   modelClass = class extends base
-    @modelName: defn.modelName
     @bucket: bucket
     @connection: defn.connection or null
     @hooks: clone base.hooks
@@ -141,56 +144,6 @@ exports.createModel = createModel = (defn, base=BaseModel)->
 
   assign modelClass, server
 
-  setName modelClass, defn.modelName
+  setName modelClass, name
 
   modelClass
-
-
-Empty = createModel modelName:'Empty', bucket:'e0s'
-
-console.log 'class modelName is correct:', Empty.modelName == 'Empty'
-console.log 'class bucket is correct:', Empty.bucket == 'e0s'
-console.log 'class has static get:', Empty.get?
-console.log ''
-
-e0 = Empty.create {}
-console.log 'instance bucket correct:', e0.bucket == 'e0s'
-console.log 'instance does not have static get:', not e0.get?
-console.log ''
-
-console.log 'class does not have static put:', not Empty.put?
-console.log 'instance has non-static put:', (Empty.create {}).put?
-console.log ''
-
-e1 = Empty.get 1
-console.log 'class get creates instance:', e1.constructor == Empty
-console.log 'instance has same bucket as class:', e1.bucket == Empty.bucket
-Empty.bucket = 'x'
-console.log '... but not after change to class:', e1.bucket == 'e0s'
-
-e1.bucket = 'y'
-console.log '... even after change to instance:', e1.bucket == 'y', Empty.bucket == 'x'
-console.log ''
-
-
-e2 = Empty.create {}
-console.log 'instance put bound correctly:', e2.put() == e2
-
-con = [44]
-
-Xion = createModel modelName: 'Xion', bucket:'cs', connection: con
-console.log 'class gets connection via createModel:', Xion.connection is con
-x = Xion.create {}
-console.log 'instance gets connection via create:', x.connection is con
-console.log ''
-
-
-D = createModel modelName: 'Deletes', bucket: 'ds'
-console.log 'class has static del method:', D.del?
-[k, cls] = D.del('key')
-console.log 'class static del method returns cls:', k=='key', cls==D
-
-d = D.create {}
-console.log 'instance has del method:', d.del?
-[i, obj] = d.del('key')
-console.log 'instance del method returns instance:', i=='key', d==obj
