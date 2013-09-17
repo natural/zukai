@@ -1,7 +1,7 @@
 assert = require 'assert'
 {each} = require 'underscore'
 {createClient} = require 'riakpbc'
-{createModel} = require '../src'
+{createModel} = require '../src/model'
 
 
 describe 'Schema Property Defaults', ->

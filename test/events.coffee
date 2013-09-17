@@ -1,14 +1,11 @@
-assert = require 'assert'
 {createClient} = require 'riakpbc'
 {createModel} = require '../src/model'
-
-
-Model = null
+assert = require 'assert'
 
 
 describe 'Events', ->
   beforeEach (done)->
-    Model = createModel
+    @model = createModel
       name: 'eventcheck'
       connection: createClient()
       schema:
@@ -21,32 +18,35 @@ describe 'Events', ->
 
   describe 'create event', ->
     it 'should fire', (done)->
-      Model.server.on 'create', (inst)->
+      model = @model
+      model.server.on 'create', (inst)->
         assert inst.doc.name == 'alice'
-        Model.server.removeAllListeners 'create'
+        model.server.removeAllListeners 'create'
         done()
-
-      alice = Model.create doc: name:'alice', age:21
+      alice = model.create doc: name:'alice', age:21
 
   describe 'delete event', ->
     it 'should fire', (done)->
-      Model.on 'del', (inst)->
-        assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'delete'
+      model = @model
+      model.server.on 'del', (key)->
+        assert key == alice.key
+        model.server.removeAllListeners 'delete'
         done()
-      alice = Model.create name:'alice', age:21
+      alice = model.create doc: name:'alice', age:21
       alice.put().then ->
         alice.del().then(->)
 
   describe 'put event', ->
     it 'should fire', (done)->
-      Model.on 'put', (inst)->
+      model = @model
+      model.server.on 'put', (inst)->
         assert inst.doc.name == 'alice'
-        Model.removeAllListeners 'put'
+        model.server.removeAllListeners 'put'
         done()
-      alice = Model.create name:'alice', age:21
+      alice = model.create doc: name:'alice', age:21
       alice.put().then ->
         alice.del().then(->)
+
 
   describe 'event emitter options', ->
     it 'should send wildcard events with wildcard:true', (done)->
@@ -62,9 +62,9 @@ describe 'Events', ->
             age:
               type: 'number'
 
-      Loud.on '*', (inst)->
+      Loud.server.on '*', (inst)->
         done()
-      Loud.create name:'alice', age:32
+      Loud.create doc: name:'alice', age:32
 
     it 'should emit newListener event with newListener:true', (done)->
       Loud = createModel
@@ -79,7 +79,7 @@ describe 'Events', ->
             age:
               type: 'number'
 
-      Loud.on 'newListener', ->
+      Loud.server.on 'newListener', ->
         done()
-      Loud.on 'create', (inst)->
-      Loud.create name:'alice', age:32
+      Loud.server.on 'create', (inst)->
+      Loud.create doc: name:'alice', age:32

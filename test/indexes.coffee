@@ -1,19 +1,17 @@
-assert = require 'assert'
 {createClient} = require 'riakpbc'
-{createModel} = require '../src'
-
-
-Model = IndexedModel = null
+{createModel} = require '../src/model'
+assert = require 'assert'
 
 
 describe 'Indexes', ->
   before (done)->
-    Model = createModel 'foo',
+    @model = createModel
+      name: 'foo'
       connection: createClient()
       indexes: ->
-        null
 
-    IndexedModel = createModel 'bar',
+    @indexedModel = createModel
+      name: 'bar'
       connection: createClient()
       indexes: ->
         [
@@ -28,16 +26,19 @@ describe 'Indexes', ->
           age:
             type: 'number'
 
+
     done()
 
 
   describe 'index function', ->
-    it 'should be present on Models and objects', (done)->
-      assert Model.indexes?
-      assert Model.create().indexes?
+    it.only 'should be present on Models and objects', (done)->
+      model = @model
+      console.log model.indexes, model.name
+      assert model.indexes?
+#      assert model.create().indexes?
 
-      assert typeof Model.indexes == 'function'
-      assert typeof Model.create().indexes == 'function'
+#      assert typeof model.indexes == 'function'
+#      assert typeof model.create().indexes == 'function'
 
       done()
 
