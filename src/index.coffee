@@ -84,12 +84,18 @@ exports.ProtoModel =
         deferred.reject message: reply.errmsg
       else if reply?.content
         objects = under.map reply.content, (result)->
+          if result.deleted?
+            return null
           if not options.head
             content = self.decode result.value
           else
             content = {}
           inst = self.create key, content
           under.extend inst, links: result.links, reply: reply, key: key
+
+        objects = (obj for obj in objects when obj != null)
+        if not objects.length
+          return deferred.resolve null
 
         objects = objects[0] if objects.length == 1
         if options.walk and objects.links?
